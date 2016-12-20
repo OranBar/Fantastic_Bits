@@ -73,6 +73,7 @@ class Player {
         //Parameters
         private int accioMinDistanceThld = 2500;
         private int accioMaxDistanceThd = 5000;
+        private int minAccioPower = 135;
         private int flipendoMinDistanceFromGoalThld = 2000;
         private int flipendoMaxDistanceThld = 5000;
         private int passingDistanceThld = 2000;
@@ -507,7 +508,7 @@ class Player {
                 }
                 //If accio power is too weak, don't do it.
                 System.err.println("Accio power is"+getAccioPower(myPlayers[i], targets[i]));
-                if(getAccioPower(myPlayers[i], targets[i]) < 110){
+                if(getAccioPower(myPlayers[i], targets[i]) < minAccioPower){
                 	//continue; //TODO: add this line in
                 }
                 
