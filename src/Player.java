@@ -79,6 +79,7 @@ class Player {
         
         public Game game;
         public int myTeam;
+        public int opponentTeam;
         public int turns;
         
         public int myMana = -1;
@@ -94,6 +95,7 @@ class Player {
         public Napoleon(Game game, int team){
             this.game = game;
             this.myTeam = team;
+            this.opponentTeam = 1-myTeam;
         }
         
         public String[] think(){
@@ -114,30 +116,53 @@ class Player {
             for(int i=0; i<2; i++){
             	if(myPlayers[i].state == 0){
                 	//TODO: check if doing the right computation on the player acceleration
-                    result[i] = "MOVE" +" " + (targets[i].x + targets[i].vx *3 -myPlayers[i].vx/2) 
-                    		+" "+ (targets[i].y + targets[i].vy*3 - myPlayers[i].vy/2) + " "+ "150";
+                    result[i] = "MOVE" +" " + (targets[i].x + targets[i].vx *3 - myPlayers[i].vx) 
+                    		+" "+ (targets[i].y + targets[i].vy*3 - myPlayers[i].vy) + " "+ "150";
                 }else{
                 	usingAccio[i] = 0; //TODO: why?
-                    int x = game.getGoal(1-myTeam).x; 
-                    int y = game.getGoal(1-myTeam).y;
-                   
+                    int x = game.getGoal(opponentTeam).x; 
+                    int y = -1;
+                    
+                    //Snaffles have radius of 150. I'm going to use 300 to be sure I'm not hitting the pole.
+                    //I'm also checking if I'm too close to the post. In that case, just throw it to the middle of the goal I guess.
+                    Point goalTop = game.getGoalTop(opponentTeam);
+                    if(myPlayers[i].y < goalTop.y && game.getDistance(myPlayers[i].position, goalTop) > 2000){
+                    	y = game.getGoalTop(opponentTeam).y + 300;
+                    } else if(myPlayers[i].y > game.getGoalBottom(opponentTeam).y && game.getDistance(myPlayers[i].position, goalTop) > 2000){ 
+                    	y = game.getGoalBottom(opponentTeam).y - 300;
+                    } else {
+                    	y = myPlayers[i].y;
+                    }
+                    
                     if(shouldThisPlayerPassToTheOther(myPlayers[i], myPlayers[1-i])){
                         System.err.println("Passing to the other player");
     	            	Point throwTarget = myPlayers[1-i].futurePosition();
     	            	
     	            	Entity heldSnaffle = findNearestSnuffle(myPlayers[i].position);
     	            	System.err.println("distance to held snaffle "+game.getDistance(myPlayers[i], heldSnaffle)
-    	            		+"held snaffle "+heldSnaffle.id);
-    	            	//throwTarget.translate(-heldSnaffle.vx, -heldSnaffle.vy);
-    	            	//throwTarget.translate(-myPlayers[i].vx, -myPlayers[i].vy);
+    	            		+"- held snaffle "+heldSnaffle.id);
+    	            	
     	            	
                     	x = throwTarget.x;
                         y = throwTarget.y;
                     }
                     
                     //I'm subtracting my velocity from the target position, to make it really go where I want it to go.
-                    x += myPlayers[i].vx * -1;
-                    y += myPlayers[i].vy * -1;
+                    //System.err.println("my velocity x "+myPlayers[i].vx+"- y "+myPlayers[i].vy);
+                    //System.err.println("snaffle velocity x "+targets[i].vx+"- y "+targets[i].vy);
+                    
+                    //I want my desired velocity to be in the direction of this target.
+                    Vector desiredVelocity = new Vector(x,y).minus(new Vector(myPlayers[i].position));
+                    Vector offset = desiredVelocity.minus(new Vector(myPlayers[i].vx*2, myPlayers[i].vy*2));
+                    
+                    x = myPlayers[i].x + (int)offset.x;
+                    y = myPlayers[i].y + (int)offset.y;
+                    
+                    System.err.println("desired velocity "+desiredVelocity 
+                    		+"\n- offset "+offset);
+                    
+                    //x += myPlayers[i].vx * -1;
+                    //y += myPlayers[i].vy * -1;
                     
                     result[i] = "THROW "+x+" "+y+" 500";
                 }
@@ -174,7 +199,7 @@ class Player {
             	result[0] = "MOVE" +" " + (targets[0].x + targets[0].vx *3 -myPlayers[0].vx/2) +" "+ (targets[0].y + targets[0].vy*3 - myPlayers[0].vy/2) + " "+ "150";
             }else{
             	usingAccio[0] = 0;
-                int x = game.getGoal(1-myTeam).x, y = game.getGoal(1-myTeam).y;
+                int x = game.getGoal(opponentTeam).x, y = game.getGoal(opponentTeam).y;
                
                 if(areAlliedPlayersWithinPassingDistance(myPlayers)){
 	            	x = myPlayers[1].x;
@@ -188,7 +213,7 @@ class Player {
                 result[1] = "MOVE" +" " + (targets[1].x + targets[1].vx*2) +" "+ (targets[1].y + targets[1].vy*2) + " "+ "150";
             }else{
             	usingAccio[1] = 0;
-            	int x = game.getGoal(1-myTeam).x, y = game.getGoal(1-myTeam).y;
+            	int x = game.getGoal(opponentTeam).x, y = game.getGoal(opponentTeam).y;
                 
                 if(areAlliedPlayersWithinPassingDistance(myPlayers)){
 	            	x = myPlayers[0].x;
@@ -214,8 +239,8 @@ class Player {
         
         private boolean shouldThisPlayerPassToTheOther(Entity player0, Entity player1){
         	double[] distancesFromGoal = new double[2];
-        	distancesFromGoal[0] = game.getDistance(player0.position, game.getGoal(1-myTeam)); 
-        	distancesFromGoal[1] = game.getDistance(player1.position, game.getGoal(1-myTeam));
+        	distancesFromGoal[0] = game.getDistance(player0.position, game.getGoal(opponentTeam)); 
+        	distancesFromGoal[1] = game.getDistance(player1.position, game.getGoal(opponentTeam));
         	
         	distancesFromGoal[1] += 200; //I'm faking the other player being further away from the goal, to discourage steep vertical passing.
         	
@@ -223,8 +248,11 @@ class Player {
         	
         	double distanceBetweenPlayers = game.getDistance(player0, player1);
         	//At first let's try to always target the attacker instead of the goal.
-        	if(otherPlayerCloserToGoal && distanceBetweenPlayers > 1300 && Math.abs(player0.x - player1.x) > 1300 
-        			/*&& distanceBetweenPlayers < 3000*/){ 
+        	if(otherPlayerCloserToGoal 
+        	&& distanceBetweenPlayers > 1300 
+        	&& Math.abs(player0.x - player1.x) > 1300	//He has to be forward
+        	&& Math.abs(player0.y - player1.y) < 4000	//Not too far on the y axis
+        	/*&& distanceBetweenPlayers < 3000*/){ 
         		return true;
         	}
         	
@@ -331,8 +359,8 @@ class Player {
 		private boolean isThereObstacleBetweenSnaffleAndGoal(Entity snaffle, Entity playerFlipendoing){
 			 System.err.println(playerFlipendoing.id+" Flipendo Lined up "+snaffle.id);
              
-             Point highest = game.getGoal(1-myTeam);
-             Point lowest = game.getGoal(1-myTeam);
+             Point highest = game.getGoal(opponentTeam);
+             Point lowest = game.getGoal(opponentTeam);
              
              Point snafflePosPrediction = new Point((snaffle.x + snaffle.vx), (snaffle.y + snaffle.vy) + (int)(snaffle.vy*0.5));
              
@@ -487,8 +515,8 @@ class Player {
             
             Entity[] targets = new Entity[2];
             
-            targets[0] = findNearest( myPlayers[0].position, snaffles );
-            targets[1] = findNearest( myPlayers[1].position, snaffles ); 
+            targets[0] = findNearestFuture( myPlayers[0], snaffles );
+            targets[1] = findNearestFuture( myPlayers[1], snaffles ); 
             
             if(snaffles.size() == 1){
                 double[] distanceFromSnaffle = new double[2];
@@ -497,13 +525,13 @@ class Player {
                 
                 for(int i=0; i<2;i++){
                     if(distanceFromSnaffle[i] > distanceFromSnaffle[1-i] ){
-                        double distanceFromGoal = game.getDistanceFromGoal(myPlayers[1-i].position, 1-myTeam);
+                        double distanceFromGoal = game.getDistanceFromGoal(myPlayers[1-i].position, opponentTeam);
                         
                         
                         
                         Point targetPoint = new Point(-1,-1);
-                        targetPoint.x = game.getGoal(1-myTeam).x - myPlayers[1-i].position.x;
-                        targetPoint.y = game.getGoal(1-myTeam).y - myPlayers[1-i].position.y;
+                        targetPoint.x = game.getGoal(opponentTeam).x - myPlayers[1-i].position.x;
+                        targetPoint.y = game.getGoal(opponentTeam).y - myPlayers[1-i].position.y;
                         
                         
                         targetPoint.x /= distanceFromGoal;
@@ -511,8 +539,8 @@ class Player {
                         
                         if(targetPoint.x==0) return targets;
                         
-                        targetPoint.x = myPlayers[i-1].position.x + targetPoint.x * 2000;
-                        targetPoint.y = myPlayers[i-1].position.y + targetPoint.y * 2000;
+                        targetPoint.x = myPlayers[1-i].position.x + targetPoint.x * 2000;
+                        targetPoint.y = myPlayers[1-i].position.y + targetPoint.y * 2000;
                         
                         Entity temp = new Entity(snaffles.get(0).id, "PuntoNelVuoto");
                         temp.updateInfo( targetPoint.x, targetPoint.y, 0, 0, 0);
@@ -592,6 +620,20 @@ class Player {
 
             for(Entity e : entities){
                 double currDistance = getDistance(start, e.position);
+                if(currDistance < distance){
+                    nearest = e;
+                    distance = currDistance;
+                }
+            }
+            return nearest;
+        }
+        
+        private Entity findNearestFuture(Entity me, List<Entity> entities){
+            Entity nearest = null;
+            double distance = Integer.MAX_VALUE;
+
+            for(Entity e : entities){
+                double currDistance = game.getDistanceFuture(me, e);
                 if(currDistance < distance){
                     nearest = e;
                     distance = currDistance;
@@ -720,6 +762,7 @@ class Player {
 				&& y == entity.y;
 	    }
         
+        /** Does not take into account friction */
         public Point futurePosition(){
         	Point newPoint = (Point)this.position.clone(); 
         	newPoint.translate(vx, vy);
@@ -729,9 +772,12 @@ class Player {
     
     public static class Game {
         
-    	public final Point 	goal0_center = new Point(0, 3750), 
-    						goal1_center =  new Point(16000, 3750);
-    
+    	public final Point 	goal0_center = new Point(   0  , 3750 );
+    	public final Point	goal0_top    = new Point(   0  , 3750-(2000-300) );
+    	public final Point	goal0_bottom = new Point(   0  , 3750+(2000-300) );
+    	public final Point	goal1_center = new Point( 16000, 3750 );
+    	public final Point	goal1_top    = new Point( 16000, 3750-(2000-300) );
+    	public final Point	goal1_bottom = new Point( 16000, 3750+(2000-300) );
     	
         public int[] score = new int[2];       
         
@@ -841,9 +887,248 @@ class Player {
             }
         }
         
+        public double getDistanceFuture(Entity e1, Entity e2){
+        	Point start = e1.futurePosition();
+        	Point end = e2.futurePosition();
+        	return Math.sqrt(Math.pow(start.x-end.x,2)+Math.pow(start.y-end.y,2));
+        }
+        
         public Point getGoal(int team){
             return (Point) ((team==0) ? goal0_center.clone() : goal1_center.clone());
+        }
+        
+        public Point getGoalTop(int team){
+            return (Point) ((team==0) ? goal0_top.clone() : goal1_top.clone());
                 
+        }
+        
+        public Point getGoalBottom(int team){
+            return (Point) ((team==0) ? goal0_bottom.clone() : goal1_bottom.clone());
+                
+        }
+    }
+    
+    /**
+     * @author Manwe
+     * 
+     * Class representing a vector (x,y) with double precision
+     * It contains final fields and will return a new instance on each performed operations
+     *
+     */
+    public static class Vector {
+        private static String doubleToString(double d) {
+            return String.format("%.3f", d);
+        }
+
+        public final double x;
+
+        public final double y;
+
+        /**
+         * Used in the equals method in order to consider two double are "equals"
+         */
+        public static double COMPARISON_TOLERANCE = 0.0000001;
+
+        /**
+         * Constructor from a given point
+         * @param point
+         * 	The point from which we will take the x and y
+         */
+        public Vector(Point coord) {
+            this(coord.x, coord.y);
+        }
+
+        /**
+         * Constructor from two double
+         * @param x
+         * 	the x value of the vector
+         * @param y
+         *  the y value of the vector
+         */
+        public Vector(double x, double y) {
+            this.x = x;
+            this.y = y;
+        }
+
+        
+        /**
+         * Constructor from another vector
+         * @param other
+         * 		use the x and y values of the given vector
+         */
+        public Vector(Vector other) {
+            this(other.x, other.y);
+        }
+
+        
+        /**
+         * Add to this vector the given vector
+         * @param other
+         * @return
+         * 	a new instance of vector sum of this and the given vector
+         */
+        public Vector add(Vector other) {
+            return new Vector(x + other.x, y + other.y);
+        }
+
+        /**
+         * Negates this vector. The vector has the same magnitude as before, but its direction is now opposite.
+         * 
+         * @return a new vector instance with both x and y negated
+         */
+        public Vector negate() {
+            return new Vector(-x, -y);
+        }
+
+        /**
+         * Return a new instance of vector rotated from the given number of degrees.
+         * @param degree
+         * 		the number of degrees to rotate
+         * @return
+         * 		a new instance rotated
+         */
+        public Vector rotateInDegree(double degree){
+        	return rotateInRadian(Math.toRadians(degree));
+        }
+
+        /**
+         * Return a new instance of vector rotated from the given number of radians.
+         * @param radians
+         * the number of radians to rotate
+         * @return
+         * a new instance rotated
+         */
+        public Vector rotateInRadian(double radians) {
+            final double length = length();
+            double angle = angleInRadian();
+            angle += radians;
+            final Vector result = new Vector(Math.cos(angle), Math.sin(angle));
+            return result.multiply(length);
+        }
+
+        /**
+         * @return
+         * 	the angle between this vector and the vector (1,0) in degrees
+         */
+        public double angleInDegree() {
+            return Math.toDegrees(angleInRadian());
+        }
+
+    	/**
+    	 * @return
+         * 	the angle between this vector and the vector (1,0) in radians
+    	 */
+    	private double angleInRadian() {
+    		return Math.atan2(y, x);
+    	}
+
+        /**
+         * dot product operator
+         * two vectors that are perpendicular have a dot product of 0
+         * @param other
+         * 		the other vector of the dot product
+         * @return
+         * 		the dot product
+         */
+        public double dot(Vector other) {
+            return x * other.x + y * other.y;
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (this == obj) {
+                return true;
+            }
+            if (obj == null) {
+                return false;
+            }
+            if (getClass() != obj.getClass()) {
+                return false;
+            }
+            final Vector other = (Vector) obj;
+            if (Math.abs(x - other.x) > COMPARISON_TOLERANCE) {
+                return false;
+            }
+            if (Math.abs(y - other.y) > COMPARISON_TOLERANCE) {
+                return false;
+            }
+            return true;
+        }
+
+        @Override
+        public int hashCode() {
+            final int prime = 31;
+            int result = 1;
+            long temp;
+            temp = Double.doubleToLongBits(x);
+            result = prime * result + (int) (temp ^ (temp >>> 32));
+            temp = Double.doubleToLongBits(y);
+            result = prime * result + (int) (temp ^ (temp >>> 32));
+            return result;
+        }
+
+        /**
+         * @return the length of the vector
+         * Hint: prefer length2 to perform length comparisons
+         */
+        public double length() {
+            return Math.sqrt(x * x + y * y);
+        }
+
+        /**
+         * @return the square of the length of the vector
+         */
+        public double length2() {
+            return x * x + y * y;
+        }
+
+        /**
+         * Return the vector resulting in this vector minus the values of the other vector
+         * @param other
+         * the instance to substract from this
+         * @return
+         * 
+         * a new instance of vector result of the minus operation.
+         */
+        public Vector minus(Vector other) {
+            return new Vector(x - other.x, y - other.y);
+        }
+
+        /**
+         * multiplication operator
+         * @param factor
+         * the double coefficient to multiply the vector with
+         * @return
+         * return a new instance multiplied by the given factor
+         */
+        public Vector multiply(double factor) {
+            return new Vector(x * factor, y * factor);
+        }
+
+        /**
+         * @return
+         * the new instance normalized from this. A normalized instance has a length of 1
+         * If the length of this is 0 returns a (0,0) vector
+         */
+        public Vector norm() {
+            final double length = length();
+            if (length>0)
+            	return new Vector(x / length, y / length);
+            return new Vector(0,0);
+        }
+
+        /**
+         * Returns the orthogonal vector (-y,x).
+         * @return
+         *  a new instance of vector perpendicular to this
+         */
+        public Vector ortho() {
+            return new Vector(-y, x);
+        }
+
+        @Override
+        public String toString() {
+            return "[x=" + doubleToString(x) + ", y=" + doubleToString(y) + "]";
         }
     }
 }
