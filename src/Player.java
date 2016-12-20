@@ -835,7 +835,9 @@ class Player {
         
         public double getDistanceFromGoal(Point start, int team){
             if(team==0){
+            	return getDistance(start, getGoal(1-team));
             } else {
+            	return getDistance(start, getGoal(1-team));
             }
         }
         
