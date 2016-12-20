@@ -71,11 +71,12 @@ class Player {
     	private final int obliviateCost = 5, petrificusCost = 10, accioCost = 15, flipendoCost = 20;
     	
         //Parameters
-        private int accioMinDistanceThld = 2500;
+        private int accioMinDistanceThld = 2000;
         private int accioMaxDistanceThd = 5000;
-        private int minAccioPower = 135;
+        private int minAccioPower = 120;
         private int flipendoMinDistanceFromGoalThld = 2000;
-        private int flipendoMaxDistanceThld = 5000;
+        private int flipendoMaxDistanceThld = 6000;
+        private int playersTooCloseThreshold = 2000;
         private int passingDistanceThld = 2000;
         
         public Game game;
@@ -129,7 +130,6 @@ class Player {
                     
                     Point goalTop = game.getGoalTop(opponentTeam);
                     if(myPlayers[i].y < goalTop.y){
-                    	
                     	//If I'm too close to the post, I'd rather shoot to the center
                     	if(game.getDistance(myPlayers[i].position, goalTop) > 2000){
                     		y = game.getGoalTop(opponentTeam).y + 300;
@@ -498,12 +498,12 @@ class Player {
                 //If it's too close, then there is no point -- wrong comment
                 //If it's too far, it won't do anything
                 if(game.getDistance(player, targets[i]) < accioMinDistanceThld ){
-                    continue;
+                    //continue; //TODO: uncomment this line
                 }
                 //If accio power is too weak, don't do it.
                 System.err.println("Accio power is"+getAccioPower(myPlayers[i], targets[i]));
                 if(getAccioPower(myPlayers[i], targets[i]) < minAccioPower){
-                	continue; //TODO: add this line in
+                	continue; //TODO: For some reason this line is horrible.
                 }
                 
                 if(findNearest(targets[i].position, game.getAllSnatchers()).id != player.id){
@@ -550,8 +550,6 @@ class Player {
                     if(distanceFromSnaffle[i] > distanceFromSnaffle[1-i] ){
                         double distanceFromGoal = game.getDistanceFromGoal(myPlayers[1-i].position, opponentTeam);
                         
-                        
-                        
                         Point targetPoint = new Point(-1,-1);
                         targetPoint.x = game.getGoal(opponentTeam).x - myPlayers[1-i].position.x;
                         targetPoint.y = game.getGoal(opponentTeam).y - myPlayers[1-i].position.y;
@@ -587,7 +585,7 @@ class Player {
                 }
             }
             
-            //Switching the snaffles between players sometimes leads to better results. i.e. they don't cross each other
+            //Switching the snaffles between players leads to better results. i.e. they don't cross each other
             if(getDistance(myPlayers[0], targets[1])+getDistance(myPlayers[1], targets[0]) <
                 getDistance(myPlayers[0], targets[0])+getDistance(myPlayers[1], targets[1])){
                     Entity temp = targets[0];
@@ -595,6 +593,27 @@ class Player {
                     targets[1] = temp;
             }
             
+            while(snaffles.size() >= 3 && game.getDistance(targets[0], targets[1]) < playersTooCloseThreshold){
+        		int playerCloserToItsTarget = -1;
+            	if(getDistance(myPlayers[0], targets[0]) <= getDistance(myPlayers[1], targets[1])){
+            		playerCloserToItsTarget = 0;
+            	} else {
+            	    playerCloserToItsTarget = 1;
+            	}
+            	Entity removedSnaffle = targets[1-playerCloserToItsTarget];
+            	snaffles.remove(targets[playerCloserToItsTarget]);
+            	snaffles.remove(targets[1-playerCloserToItsTarget]);
+            	targets[1-playerCloserToItsTarget] = findNearestFuture( myPlayers[1-playerCloserToItsTarget], snaffles ); 
+            	
+            	System.err.println((1-playerCloserToItsTarget)+" wanted to go for "+removedSnaffle.id
+            			+". The distance was "+getDistance(myPlayers[1-playerCloserToItsTarget], removedSnaffle)
+            			+" It will now go for "+targets[1-playerCloserToItsTarget].id);
+        		
+            }
+            
+            //if(snaffles.size() >= 3 && game.getDistance(targets[0], targets[1]) < playersTooCloseThreshold){
+            	
+            //}
                 
             return targets;
           
