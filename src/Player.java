@@ -125,26 +125,43 @@ class Player {
                     
                     //Snaffles have radius of 150. I'm going to use 300 to be sure I'm not hitting the pole.
                     //I'm also checking if I'm too close to the post. In that case, just throw it to the middle of the goal I guess.
+                    
                     Point goalTop = game.getGoalTop(opponentTeam);
-                    if(myPlayers[i].y < goalTop.y && game.getDistance(myPlayers[i].position, goalTop) > 2000){
-                    	y = game.getGoalTop(opponentTeam).y + 300;
-                    } else if(myPlayers[i].y > game.getGoalBottom(opponentTeam).y && game.getDistance(myPlayers[i].position, goalTop) > 2000){ 
-                    	y = game.getGoalBottom(opponentTeam).y - 300;
+                    if(myPlayers[i].y < goalTop.y){
+                    	
+                    	//If I'm too close to the post, I'd rather shoot to the center
+                    	if(game.getDistance(myPlayers[i].position, goalTop) > 2000){
+                    		y = game.getGoalTop(opponentTeam).y + 300;
+                    	} else {
+                    		y = game.getGoal(opponentTeam).y;
+                    	}
+                    } else if(myPlayers[i].y > game.getGoalBottom(opponentTeam).y){ 
+                    	//If I'm too close to the post, I'd rather shoot to the center
+                    	if(game.getDistance(myPlayers[i].position, goalTop) > 2000){
+                    		y = game.getGoalBottom(opponentTeam).y - 300;
+                    	} else {
+                    		y = game.getGoal(opponentTeam).y;
+                    	}
                     } else {
                     	y = myPlayers[i].y;
                     }
                     
                     if(shouldThisPlayerPassToTheOther(myPlayers[i], myPlayers[1-i])){
                         System.err.println("Passing to the other player");
-    	            	Point throwTarget = myPlayers[1-i].futurePosition();
+    	            	//Point throwTarget = myPlayers[1-i].futurePosition();
+    	            	
+    	            	Vector desiredVelocity = new Vector(myPlayers[1-i].futurePosition()).minus(new Vector(myPlayers[i].position));
+                        Vector offset = desiredVelocity.minus(new Vector(myPlayers[i].vx*2, myPlayers[i].vy*2));
+                        
+                        x = myPlayers[i].x + (int)offset.x;
+                        y = myPlayers[i].y + (int)offset.y;
     	            	
     	            	Entity heldSnaffle = findNearestSnuffle(myPlayers[i].position);
     	            	System.err.println("distance to held snaffle "+game.getDistance(myPlayers[i], heldSnaffle)
     	            		+"- held snaffle "+heldSnaffle.id);
     	            	
-    	            	
-                    	x = throwTarget.x;
-                        y = throwTarget.y;
+    	            	//x = throwTarget.x;
+                        //y = throwTarget.y;
                     }
                     
                     //I'm subtracting my velocity from the target position, to make it really go where I want it to go.
