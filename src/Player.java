@@ -149,20 +149,14 @@ class Player {
                     
                     if(shouldThisPlayerPassToTheOther(myPlayers[i], myPlayers[1-i])){
                         System.err.println("Passing to the other player");
-    	            	//Point throwTarget = myPlayers[1-i].futurePosition();
-    	            	
-    	            	Vector desiredVelocity = new Vector(myPlayers[1-i].futurePosition()).minus(new Vector(myPlayers[i].position));
-                        Vector offset = desiredVelocity.minus(new Vector(myPlayers[i].vx*2, myPlayers[i].vy*2));
-                        
-                        x = myPlayers[i].x + (int)offset.x;
-                        y = myPlayers[i].y + (int)offset.y;
+    	            	Point throwTarget = myPlayers[1-i].futurePosition();
     	            	
     	            	Entity heldSnaffle = findNearestSnuffle(myPlayers[i].position);
     	            	System.err.println("distance to held snaffle "+game.getDistance(myPlayers[i], heldSnaffle)
     	            		+"- held snaffle "+heldSnaffle.id);
     	            	
-    	            	//x = throwTarget.x;
-                        //y = throwTarget.y;
+    	            	x = throwTarget.x;
+                        y = throwTarget.y;
                     }
                     
                     //I'm subtracting my velocity from the target position, to make it really go where I want it to go.
@@ -509,7 +503,7 @@ class Player {
                 //If accio power is too weak, don't do it.
                 System.err.println("Accio power is"+getAccioPower(myPlayers[i], targets[i]));
                 if(getAccioPower(myPlayers[i], targets[i]) < minAccioPower){
-                	//continue; //TODO: add this line in
+                	continue; //TODO: add this line in
                 }
                 
                 if(findNearest(targets[i].position, game.getAllSnatchers()).id != player.id){
