@@ -491,10 +491,40 @@ class Player {
             targets[1] = findNearest( myPlayers[1].position, snaffles ); 
             
             if(snaffles.size() == 1){
+                double[] distanceFromSnaffle = new double[2];
+                distanceFromSnaffle[0] = game.getDistance(myPlayers[0], snaffles.get(0));
+                distanceFromSnaffle[1] = game.getDistance(myPlayers[1], snaffles.get(0));
+                
+                for(int i=0; i<2;i++){
+                    if(distanceFromSnaffle[i] > distanceFromSnaffle[1-i] ){
+                        double distanceFromGoal = game.getDistanceFromGoal(myPlayers[1-i].position, 1-myTeam);
+                        
+                        
+                        
+                        Point targetPoint = new Point(-1,-1);
+                        targetPoint.x = game.getGoal(1-myTeam).x - myPlayers[1-i].position.x;
+                        targetPoint.y = game.getGoal(1-myTeam).y - myPlayers[1-i].position.y;
+                        
+                        
+                        targetPoint.x /= distanceFromGoal;
+                        targetPoint.y /= distanceFromGoal;
+                        
+                        if(targetPoint.x==0) return targets;
+                        
+                        targetPoint.x = myPlayers[i-1].position.x + targetPoint.x * 2000;
+                        targetPoint.y = myPlayers[i-1].position.y + targetPoint.y * 2000;
+                        
+                        Entity temp = new Entity(snaffles.get(0).id, "PuntoNelVuoto");
+                        temp.updateInfo( targetPoint.x, targetPoint.y, 0, 0, 0);
+                        targets[i] = temp;
+                        System.err.println("Attacker Split Behaviour");
+                    }
+                }
+                
                 return targets;                
             }
             
-            //Don't let the players go for the same snaffles if there are more on the field.
+            //Don't let the players go for the same snaffle if there are more on the field.
             //Might want to change this, if I implement passing to attacker. Probably not
             if(targets[0]==targets[1]){
                 if(getDistance(myPlayers[0], targets[0])<=getDistance(myPlayers[1], targets[1])){
@@ -513,6 +543,7 @@ class Player {
                     targets[0] = targets[1];
                     targets[1] = temp;
             }
+            
                 
             return targets;
           
@@ -601,7 +632,7 @@ class Player {
             double a2 = getTriangleArea(player.position, snafflePos, goal2);
             double a3 = getTriangleArea(player.position, snafflePos, goal1);
             
-            //TODO: check if tollerance is too high/low
+            //TODO: check if tolleranct is too high/low
             return Math.abs( (areaBig - a1) - a2 - a3) <= 0.1;
         }
         
@@ -804,9 +835,7 @@ class Player {
         
         public double getDistanceFromGoal(Point start, int team){
             if(team==0){
-                return getDistance(start, getGoal(1-team));
             } else {
-                return getDistance(start, getGoal(team)); 
             }
         }
         
