@@ -485,8 +485,13 @@ class Player {
                 }
                 //If it's too close, then there is no point -- wrong comment
                 //If it's too far, it won't do anything
-                if(game.getDistance(player, targets[i]) > accioMinDistanceThld ){
+                if(game.getDistance(player, targets[i]) < accioMinDistanceThld ){
                     continue;
+                }
+                //If accio power is too weak, don't do it.
+                System.err.println("Accio power is"+getAccioPower(myPlayers[i], targets[i]));
+                if(getAccioPower(myPlayers[i], targets[i]) < 110){
+                	//continue; //TODO: add this line in
                 }
                 
                 if(findNearest(targets[i].position, game.getAllSnatchers()).id != player.id){
@@ -507,6 +512,12 @@ class Player {
                 }
             }
             return result;
+        }
+        
+        private double getAccioPower(Entity player, Entity snaffle){
+        	//MIN( 3000 / ( Dist / 1000 )2, 1000 )
+        	double distance = game.getDistance(player, snaffle);
+        	return Math.min( 3000/ Math.pow((distance)/1000,2), 1000);
         }
         
         private Entity[] choseTargets(Entity[] myPlayers){
