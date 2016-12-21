@@ -503,7 +503,7 @@ class Player {
                 //If accio power is too weak, don't do it.
                 System.err.println("Accio power is"+getAccioPower(myPlayers[i], targets[i]));
                 if(getAccioPower(myPlayers[i], targets[i]) < minAccioPower){
-                	continue; //TODO: For some reason this line is horrible.
+                	continue; 
                 }
                 
                 if(findNearest(targets[i].position, game.getAllSnatchers()).id != player.id){
@@ -1172,5 +1172,40 @@ class Player {
         public String toString() {
             return "[x=" + doubleToString(x) + ", y=" + doubleToString(y) + "]";
         }
+    }
+    
+    public static class Line {
+        private double slope;
+        private double offset;
+
+        private Vector pointOnLine = null;
+
+        public Line(Vector point1, Vector point2)
+        {
+            this.slope = (point2.y - point1.y) / (point2.x - point1.x);
+            this.pointOnLine = point1;
+
+            this.offset = pointOnLine.y - slope * pointOnLine.x;
+        }
+
+        public Line(Vector point1, double slope)
+        {
+            this.pointOnLine = point1;
+
+            this.offset = pointOnLine.y - slope * pointOnLine.x;
+        }
+
+        public double GetY(double x)
+        {
+            return slope * x + offset;
+        }
+
+		public double getSlope() {
+			return slope;
+		}
+
+		public double getOffset() {
+			return offset;
+		}
     }
 }
