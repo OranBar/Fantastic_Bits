@@ -1,7 +1,5 @@
 import java.util.*;
 import java.util.stream.Collectors;
-import java.io.*;
-import java.math.*;
 import java.awt.Point;
 
 /**
@@ -13,8 +11,6 @@ class Player {
     public static void main(String args[]) {
         Scanner in = new Scanner(System.in);
         int myTeamId = in.nextInt(); // if 0 you need to score on the right of the map, if 1 you need to score on the left
-        System.err.println("teamid "+myTeamId);
-                
         
         Game myGame = new Game();
         Napoleon myNapoleon = new Napoleon(myGame, myTeamId);
@@ -27,7 +23,7 @@ class Player {
             // Inputs
             ///////////////////
             myGame.score[0] = in.nextInt();
-            int myMagic = in.nextInt();
+            in.nextInt();	//My Mana
             
             myGame.score[1] = in.nextInt();
             myNapoleon.opponentMana = in.nextInt();
@@ -35,7 +31,6 @@ class Player {
             myGame.clearEntities();
             
             int entities = in.nextInt(); // number of entities still in game
-            System.err.println("entities "+entities);
             if(myNapoleon.turns == 0){
             	int noOfPlayers = 4;
             	int noOfBludgers = 2;
@@ -73,7 +68,7 @@ class Player {
         //Parameters
         private int accioMinDistanceThld = 2000;
         private int accioMaxDistanceThd = 5000;
-        private int minAccioPower = 120;
+        private int minAccioPower = 300;
         private int flipendoMinDistanceFromGoalThld = 2000;
         private int flipendoMaxDistanceThld = 6000;
         private int playersTooCloseThreshold = 2000;
@@ -132,28 +127,26 @@ class Player {
                     if(myPlayers[i].y < goalTop.y){
                     	//If I'm too close to the post, I'd rather shoot to the center
                     	if(game.getDistance(myPlayers[i].position, goalTop) > 2000){
-                    		y = game.getGoalTop(opponentTeam).y + 300;
+                    		y = game.getGoalTop(opponentTeam).y + 500;
                     	} else {
                     		y = game.getGoal(opponentTeam).y;
                     	}
                     } else if(myPlayers[i].y > game.getGoalBottom(opponentTeam).y){ 
                     	//If I'm too close to the post, I'd rather shoot to the center
                     	if(game.getDistance(myPlayers[i].position, goalTop) > 2000){
-                    		y = game.getGoalBottom(opponentTeam).y - 300;
+                    		y = game.getGoalBottom(opponentTeam).y - 500;
                     	} else {
                     		y = game.getGoal(opponentTeam).y;
                     	}
                     } else {
-                    	y = myPlayers[i].y;
+                    	y = myPlayers[i].y ;
+                	
                     }
                     
                     if(shouldThisPlayerPassToTheOther(myPlayers[i], myPlayers[1-i])){
-                        System.err.println("Passing to the other player");
-    	            	Point throwTarget = myPlayers[1-i].futurePosition();
+                        Point throwTarget = myPlayers[1-i].futurePosition();
     	            	
     	            	Entity heldSnaffle = findNearestSnuffle(myPlayers[i].position);
-    	            	System.err.println("distance to held snaffle "+game.getDistance(myPlayers[i], heldSnaffle)
-    	            		+"- held snaffle "+heldSnaffle.id);
     	            	
     	            	x = throwTarget.x;
                         y = throwTarget.y;
@@ -169,12 +162,6 @@ class Player {
                     
                     x = myPlayers[i].x + (int)offset.x;
                     y = myPlayers[i].y + (int)offset.y;
-                    
-                    System.err.println("desired velocity "+desiredVelocity 
-                    		+"\n- offset "+offset);
-                    
-                    //x += myPlayers[i].vx * -1;
-                    //y += myPlayers[i].vy * -1;
                     
                     result[i] = "THROW "+x+" "+y+" 500";
                 }
@@ -205,48 +192,6 @@ class Player {
             
             return result;
              
-            /*
-            //Player 1
-            if(myPlayers[0].state == 0){
-            	result[0] = "MOVE" +" " + (targets[0].x + targets[0].vx *3 -myPlayers[0].vx/2) +" "+ (targets[0].y + targets[0].vy*3 - myPlayers[0].vy/2) + " "+ "150";
-            }else{
-            	usingAccio[0] = 0;
-                int x = game.getGoal(opponentTeam).x, y = game.getGoal(opponentTeam).y;
-               
-                if(areAlliedPlayersWithinPassingDistance(myPlayers)){
-	            	x = myPlayers[1].x;
-                    y = myPlayers[1].y;
-                }
-                
-                result[0] = "THROW "+x+" "+y+" 500";
-            }
-            //Player 2
-            if(myPlayers[1].state == 0){
-                result[1] = "MOVE" +" " + (targets[1].x + targets[1].vx*2) +" "+ (targets[1].y + targets[1].vy*2) + " "+ "150";
-            }else{
-            	usingAccio[1] = 0;
-            	int x = game.getGoal(opponentTeam).x, y = game.getGoal(opponentTeam).y;
-                
-                if(areAlliedPlayersWithinPassingDistance(myPlayers)){
-	            	x = myPlayers[0].x;
-	                y = myPlayers[0].y;
-                }
-
-//                LinkedList<Entity> opponentsAndBludgers = game.getOpponentSnatchers();
-//                game.getOpponentSnatchers().addAll(game.getBludgers());
-//                
-//                for(Entity e : opponentsAndBludgers){
-//                    if(game.getDistance(myPlayers[0], e) < 1900){
-//                        x = x - e.x;
-//                        y = y - e.y;
-//                    }
-//                }
-
-                result[1] = "THROW "+x+" "+y+" 500";
-            }
-            */
-            
-           
         }
         
         private boolean shouldThisPlayerPassToTheOther(Entity player0, Entity player1){
@@ -286,7 +231,8 @@ class Player {
                 for(Entity snaffle : game.getSnuffles()){
                     if(
                     (isFlipendoLinedToGoal(myPlayers[i], snaffle, myTeam) 
-                    && game.getDistance(snaffle, myPlayers[i]) > 1500	//No allied player too close to the snaffle  
+                    //No allied player too close to the snaffle or closest player to snaffle is not me
+                    && (game.getDistance(snaffle, myPlayers[i]) > 1500 || findNearest(snaffle.position, game.getAllSnatchers()).entityType == "OPPONENT_WIZARD")  	  
                     && game.getDistanceFromGoal(snaffle, myTeam) > flipendoMinDistanceFromGoalThld //TODO: take out?
                     && Math.abs(snaffle.vy) < 500	//If snaffle has too much vy, I might miss 
                     && game.getDistance(snaffle, findNearest(snaffle.position, game.getAllEntitiesExcept(snaffle))) > 650 //If something really close to the snaffle, abort
@@ -304,7 +250,18 @@ class Player {
                         }
                         
                     }
+                    
+                    if(bounceGoalOpportunity(myPlayers[i], snaffle, myTeam) ){
+                    	result[i] = "FLIPENDO "+snaffle.id+" Bounce Shot!!!" ;
+                        flipendoedSnaffleId = snaffle.id;
+                        flipendoDuration = 3;
+                        myMana -= flipendoCost;
+                        
+                        return result;
+                    }
                 }
+                
+                
             }
             return result;
         }
@@ -369,28 +326,19 @@ class Player {
         }
 		
 		private boolean isThereObstacleBetweenSnaffleAndGoal(Entity snaffle, Entity playerFlipendoing){
-			 System.err.println(playerFlipendoing.id+" Flipendo Lined up "+snaffle.id);
-             
+			 
              Point highest = game.getGoal(opponentTeam);
              Point lowest = game.getGoal(opponentTeam);
              
              Point snafflePosPrediction = new Point((snaffle.x + snaffle.vx), (snaffle.y + snaffle.vy) + (int)(snaffle.vy*0.5));
              
-             System.err.println("snaffle.vy " +snaffle.vy);
-             System.err.println("snaffle.vy*4 " +snaffle.vy*4);
-             
              highest.y = snafflePosPrediction.y - 400;
              lowest.y = snafflePosPrediction.y + 400;
-
              
              boolean obstacleFound = true;
              
              for(Entity e : game.entities){
                  if(isLined(snaffle, e, highest, lowest)){
-                     System.err.println("playerFlipendoing "+playerFlipendoing.id
-                     +"snaffle "+snaffle.id
-                     +" obstruction "+e.id
-                     +" obstacleFound"+obstacleFound);
                      obstacleFound = false;
                      break;
                  }
@@ -410,7 +358,6 @@ class Player {
                     double distanceToClosestOpponent = (game.getDistance(e, findNearest(e.position, game.getOpponentSnatchers())));
                     
                     
-                    System.err.println("distanceToClosestAlly "+distanceToClosestAlly+"\n distanceToClosestOpponent "+distanceToClosestOpponent);
                     
                     //Petrificus + Accio is an incredible defensive combo, although it is very expensive.
                     if(myMana >= accioCost){
@@ -500,23 +447,13 @@ class Player {
                 if(game.getDistance(player, targets[i]) < accioMinDistanceThld ){
                     //continue; //TODO: uncomment this line
                 }
+                System.err.println(getAccioPower(myPlayers[i], targets[i]));
                 //If accio power is too weak, don't do it.
-                System.err.println("Accio power is"+getAccioPower(myPlayers[i], targets[i]));
                 if(getAccioPower(myPlayers[i], targets[i]) < minAccioPower){
                 	continue; 
                 }
                 
                 if(findNearest(targets[i].position, game.getAllSnatchers()).id != player.id){
-                    
-                    System.err.println("Using Accio with "+player.id+" on "+targets[i].id);
-                    System.err.println("Distance between me and snaffle is "+
-                        game.getDistance(player, targets[i]));
-                    System.err.println("Closest player to target is "+
-                        findNearest(targets[i].position, game.getAllSnatchers()).id
-                        +" and it is distant "+game.getDistance(player, targets[i]) );
-                        
-                    
-                    
                     result[i] = "ACCIO "+targets[i].id;
                     myMana -= accioCost;
                     usingAccio[i] = 6;
@@ -569,7 +506,6 @@ class Player {
                         System.err.println("Attacker Split Behaviour");
                     }
                 }
-                
                 return targets;                
             }
             
@@ -610,16 +546,70 @@ class Player {
             			+" It will now go for "+targets[1-playerCloserToItsTarget].id);
         		
             }
-            
-            //if(snaffles.size() >= 3 && game.getDistance(targets[0], targets[1]) < playersTooCloseThreshold){
-            	
-            //}
-                
             return targets;
-          
         }
         
-        public List<Entity> getSnafflesInAttackZone(List<Entity> snaffles){
+        private boolean bounceGoalOpportunity(Entity player, Entity snaffle, int team){
+        	if(myTeam==0 && player.futurePosition().x > snaffle.x ){
+        		return false;
+        	}
+        	if(myTeam==1 && player.futurePosition().x < snaffle.x ){
+        		return false;
+        	}
+        	Vector snaffleVelocity = new Vector(snaffle.vx, snaffle.vy);
+        	//For the love of god don't hit snaffles that are moving fast
+        	if(snaffleVelocity.length() > 400){
+        		return false;
+        	}
+        	//The bounce needs a lot of power to it. You can't do it from too far away
+        	if(game.getDistanceFromGoal(player, myTeam) > 8000){
+        		return false;
+        	}
+        	// We're too close to the goal to be thinking about bounces
+        	if(myTeam == 0 && player.x > 13600 || team == 1 && player.x < 16000-136000){
+        		return false;
+        	}
+        	
+        	Vector playerPos = new Vector(player.futurePosition());
+        	Vector snafflePos = new Vector(snaffle.position);
+
+        	
+        	Line line = new Line(playerPos, snafflePos);
+        	Vector topWallHitPoint = new Vector(line.GetX(0f), 0f);
+        	Vector bottomWallHitPoint = new Vector(line.GetX(7000f), 7000f);
+
+        	if(topWallHitPoint.x < 0 || topWallHitPoint.x > 16000){
+        		return false;
+        	}
+        	if(bottomWallHitPoint.x < 0 || bottomWallHitPoint.x > 16000){
+        		return false;
+        	}
+        	
+        	Line bounceTrajectory = null;
+        	
+        	if(myTeam==0){
+        		if(topWallHitPoint.x > player.x){
+        			bounceTrajectory = new Line(topWallHitPoint, line.getSlope()*-1);
+        		} else {
+        			bounceTrajectory = new Line(bottomWallHitPoint, line.getSlope()*-1);
+            	}
+        	} else {
+        		if(topWallHitPoint.x < player.x){
+        			bounceTrajectory = new Line(bottomWallHitPoint, line.getSlope()*-1);
+        		} else {
+        			bounceTrajectory = new Line(topWallHitPoint, line.getSlope()*-1);
+            	}
+        	}
+        	
+        	Point opponentGoal = game.getGoal(opponentTeam);
+        	
+        	if(bounceTrajectory.GetY(opponentGoal.x) > game.goal0_top.y && bounceTrajectory.GetY(opponentGoal.x) < game.goal0_bottom.y ){
+        		return true;
+        	}
+        	return false;
+        }
+
+		public List<Entity> getSnafflesInAttackZone(List<Entity> snaffles){
         	List<Entity> snafflesInAttackZone = new LinkedList<Entity>();
             
             for(Entity s : snaffles){
@@ -720,14 +710,14 @@ class Player {
             return Math.abs( (areaBig - a1) - a2 - a3) <= 0.1;
         }
         
-        public boolean isFlipendoLinedToGoal(Entity player, Entity snaffle, int team){
-            Point goal1 = (team==0) ? new Point(16000, 3750-1400) : new Point(0, 3750-1400);
-            Point goal2 = (team==0) ? new Point(16000, 3750+1400) : new Point(0, 3750+1400);
-            
-            return isLined(player, snaffle, goal1, goal2);
-        }
-        
-        private double crossProduct(Point v1, Point v2, Point v3){
+        private boolean isFlipendoLinedToGoal(Entity player, Entity snaffle, int team){
+		    Point goal1 = (team==0) ? new Point(16000, 3750-1400) : new Point(0, 3750-1400);
+		    Point goal2 = (team==0) ? new Point(16000, 3750+1400) : new Point(0, 3750+1400);
+		    
+		    return isLined(player, snaffle, goal1, goal2);
+		}
+
+		private double crossProduct(Point v1, Point v2, Point v3){
             Point a = new Point(v1.x + v2.x, v1.y + v2.y);
             Point b = new Point(v2.x + v3.x, v2.y + v3.y);
             Point c = new Point(v3.x + v1.x, v3.y + v1.y);
@@ -1191,13 +1181,17 @@ class Player {
         public Line(Vector point1, double slope)
         {
             this.pointOnLine = point1;
-
-            this.offset = pointOnLine.y - slope * pointOnLine.x;
+            this.slope = slope;
+            this.offset = pointOnLine.y - (slope * pointOnLine.x);
         }
 
         public double GetY(double x)
         {
             return slope * x + offset;
+        }
+        
+        public double GetX(double y){
+        	return (y - offset) / slope;
         }
 
 		public double getSlope() {
