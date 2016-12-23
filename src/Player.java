@@ -284,7 +284,7 @@ class Player {
                         
                     }
                     
-                    /*
+                    
                     if(bounceGoalOpportunity(myPlayers[i], snaffle, myTeam) ){
                     	result[i] = "FLIPENDO "+snaffle.id+" Bounce Shot!!!" ;
                         flipendoedSnaffleId = snaffle.id;
@@ -293,7 +293,7 @@ class Player {
                         
                         return result;
                     }
-                    */
+                    
                 }
                 
                 
