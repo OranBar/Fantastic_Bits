@@ -123,14 +123,14 @@ class Player {
                     //Snaffles have radius of 150. I'm going to use 300 to be sure I'm not hitting the pole.
                     //I'm also checking if I'm too close to the post. In that case, just throw it to the middle of the goal I guess.
                     
-                    if(myPlayers[i].y +300 < game.getGoalTop(opponentTeam).y){
+                    if(myPlayers[i].y -300 < game.getGoalTop(opponentTeam).y){
                     	//If I'm too close to the post, I'd rather shoot to the center
                     	if(game.getDistance(myPlayers[i].position, game.getGoalTop(opponentTeam)) > 2000){
                     		y = game.getGoalTop(opponentTeam).y + 300;
                     	} else {
                     		y = game.getGoal(opponentTeam).y;
                     	}
-                    } else if(myPlayers[i].y -300 > game.getGoalBottom(opponentTeam).y){ 
+                    } else if(myPlayers[i].y +300 > game.getGoalBottom(opponentTeam).y){ 
                     	//If I'm too close to the post, I'd rather shoot to the center
                     	if(game.getDistance(myPlayers[i].position, game.getGoalBottom(opponentTeam)) > 2000){
                     		y = game.getGoalBottom(opponentTeam).y - 300;
@@ -171,8 +171,12 @@ class Player {
                 result = useFlipendoShotAggressive(result, myPlayers, targets);
                 result = useAccio(result, myPlayers, targets);
                 result = usePetrificus(result, myPlayers);
+            } else if(needOneMoreGoalToLoose()) {
+                result = useFlipendoShot(result, myPlayers, targets);
+                result = useAccioDefensive(result, myPlayers, targets);
+                result = usePetrificus(result, myPlayers);
             } else {
-                result = useAccio(result, myPlayers, targets);
+            	result = useAccio(result, myPlayers, targets);
                 result = useFlipendoShot(result, myPlayers, targets);
                 result = usePetrificus(result, myPlayers);
             }
@@ -244,6 +248,10 @@ class Player {
         private boolean neddOneMoreGoalToWin(){
 			return totalSnaffles /2 == game.getScore(myTeam);
 		}
+        
+        private boolean needOneMoreGoalToLoose(){
+        	return totalSnaffles /2 == game.getScore(opponentTeam);
+        }
 
         private String[] useFlipendoShot(String[] result, Entity[] myPlayers, Entity[] targets){
         	//TODO: I think it's better to wait for flipendoCost + petrificusShot, this way I can beat a trigger happy flipendo player, 
@@ -276,6 +284,7 @@ class Player {
                         
                     }
                     
+                    /*
                     if(bounceGoalOpportunity(myPlayers[i], snaffle, myTeam) ){
                     	result[i] = "FLIPENDO "+snaffle.id+" Bounce Shot!!!" ;
                         flipendoedSnaffleId = snaffle.id;
@@ -284,6 +293,7 @@ class Player {
                         
                         return result;
                     }
+                    */
                 }
                 
                 
@@ -448,6 +458,48 @@ class Player {
         
         private String[] useAccio(String[] result, Entity[] myPlayers, Entity[] targets){
         	//TODO: should I increase the mana needed for accio?
+            if(myMana < flipendoCost+1){
+                return result;
+            }
+            
+            for(int i=0; i<2; i++){
+            	Entity player = myPlayers[i];
+                if(flipendoDuration > 0 && targets[i].id ==flipendoedSnaffleId){
+                    continue;
+                }
+                if(usingAccio[i] > 0 ){
+                    continue;
+                }
+                //Don't accio things in front of you, only backwards
+                if(myTeam == 0 && player.x < targets[i].x ){
+                    continue;                    
+                }
+                if(myTeam == 1 && player.x > targets[i].x ){
+                    continue;
+                }
+                //If it's too close, then there is no point -- wrong comment
+                //If it's too far, it won't do anything
+                if(game.getDistance(player, targets[i]) < accioMinDistanceThld ){
+                    //continue; //TODO: uncomment this line
+                }
+                System.err.println(getAccioPower(myPlayers[i], targets[i]));
+                //If accio power is too weak, don't do it.
+                if(getAccioPower(myPlayers[i], targets[i]) < minAccioPower){
+                	continue; 
+                }
+                
+                if(findNearest(targets[i].position, game.getAllSnatchers()).id != player.id){
+                    result[i] = "ACCIO "+targets[i].id;
+                    myMana -= accioCost;
+                    usingAccio[i] = 6;
+                    return result;
+                }
+            }
+            return result;
+        }
+        
+        private String[] useAccioDefensive(String[] result, Entity[] myPlayers, Entity[] targets){
+        	//TODO: should I increase the mana needed for accio?
             if(myMana < accioCost){
                 return result;
             }
@@ -599,11 +651,13 @@ class Player {
         		return false;
         	}
         	
+        	
         	Vector playerPos = new Vector(player.futurePosition());
         	Vector snafflePos = new Vector(snaffle.futurePosition());
 
         	
         	Line line = new Line(playerPos, snafflePos);
+        	
         	Vector topWallHitPoint = new Vector(line.GetX(0f), 0f);
         	Vector bottomWallHitPoint = new Vector(line.GetX(7000f), 7000f);
 
@@ -632,7 +686,8 @@ class Player {
         	
         	Point opponentGoal = game.getGoal(opponentTeam);
         	
-        	if(bounceTrajectory.GetY(opponentGoal.x) > game.goal0_top.y && bounceTrajectory.GetY(opponentGoal.x) < game.goal0_bottom.y ){
+        	//Snaffle is 150 of radius. I'm going to subtract/add 400 to the pole, to make sure I'm not hitting it. Vogliamo Solo rete.
+        	if(bounceTrajectory.GetY(opponentGoal.x) > (game.goal0_top.y + 1000) && bounceTrajectory.GetY(opponentGoal.x) < (game.goal0_bottom.y - 1000) ){
         		return true;
         	}
         	return false;
