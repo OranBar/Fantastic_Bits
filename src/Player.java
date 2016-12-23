@@ -113,7 +113,7 @@ class Player {
             for(int i=0; i<2; i++){
             	if(myPlayers[i].state == 0){
                 	//TODO: check if doing the right computation on the player acceleration
-                    result[i] = "MOVE" +" " + (targets[i].x + targets[i].vx *3 - myPlayers[i].vx) 
+            		result[i] = "MOVE" +" " + (targets[i].x + targets[i].vx *3 - myPlayers[i].vx) 
                     		+" "+ (targets[i].y + targets[i].vy*3 - myPlayers[i].vy) + " "+ "150";
                 }else{
                 	usingAccio[i] = 0; //TODO: why?
@@ -176,6 +176,31 @@ class Player {
                 result = useFlipendoShot(result, myPlayers, targets);
                 result = usePetrificus(result, myPlayers);
             }
+            
+            if(turns <= 6 && turns >= 2){
+            	Entity incomingBludger = findNearest(game.getGoal(myTeam), game.getBludgers());
+            	Entity bludgersTargetPlayer = findNearestFuture(incomingBludger, game.getAlliedSnatchers());
+                 
+                for(int i=0; i<2; i++){
+                	 Entity player = myPlayers[i];
+                	 if(player.id == bludgersTargetPlayer.id){
+                		 
+                		 int x = targets[i].x;
+                         int y = targets[i].y;
+                         
+                		 //You need to subtract velocities
+                		 Vector desiredVelocity = new Vector(x,y).minus(new Vector(myPlayers[i].futurePosition()));
+                         Vector offset = desiredVelocity.minus(new Vector(myPlayers[i].vx, myPlayers[i].vx));
+                         
+                         x += offset.x;
+                         y += offset.y;
+                        
+                		 result[i] = "MOVE "+x+" "+y+" 150";
+                	 }
+                 }
+            	
+            } 
+            
             /*
             if(turns == 5){
             	Entity bludger = game.getBludgers().get(0);
@@ -566,12 +591,16 @@ class Player {
         		return false;
         	}
         	// We're too close to the goal to be thinking about bounces
-        	if(myTeam == 0 && player.x > 13600 || team == 1 && player.x < 16000-136000){
+        	if(myTeam == 0 && player.x > 13600 || team == 1 && player.x < 16000-13600){
+        		return false;
+        	}
+        	//If I'm extremely close to the snaffle, don't do anything
+        	if(game.getDistance(player, snaffle) < 500){
         		return false;
         	}
         	
         	Vector playerPos = new Vector(player.futurePosition());
-        	Vector snafflePos = new Vector(snaffle.position);
+        	Vector snafflePos = new Vector(snaffle.futurePosition());
 
         	
         	Line line = new Line(playerPos, snafflePos);
