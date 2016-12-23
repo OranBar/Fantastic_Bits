@@ -459,7 +459,7 @@ class Player {
         
         private String[] useAccio(String[] result, Entity[] myPlayers, Entity[] targets){
         	//TODO: should I increase the mana needed for accio?
-            if(myMana < flipendoCost+1){
+            if(myMana < accioCost){
                 return result;
             }
             
