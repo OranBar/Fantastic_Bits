@@ -118,11 +118,12 @@ class Player {
                 }else{
                 	usingAccio[i] = 0; //TODO: why?
                     int x = game.getGoal(opponentTeam).x; 
-                    int y = -1;
+                    int y = game.getGoal(opponentTeam).y;
                     
                     //Snaffles have radius of 150. I'm going to use 300 to be sure I'm not hitting the pole.
                     //I'm also checking if I'm too close to the post. In that case, just throw it to the middle of the goal I guess.
                     
+                    /*
                     if(myPlayers[i].y -300 < game.getGoalTop(opponentTeam).y){
                     	//If I'm too close to the post, I'd rather shoot to the center
                     	if(game.getDistance(myPlayers[i].position, game.getGoalTop(opponentTeam)) > 2000){
@@ -139,8 +140,8 @@ class Player {
                     	}
                     } else {
                     	y = myPlayers[i].y ;
-                	
-                    }
+                	}
+                    */
                     
                     if(shouldThisPlayerPassToTheOther(myPlayers[i], myPlayers[1-i])){
                         Point throwTarget = myPlayers[1-i].futurePosition();
