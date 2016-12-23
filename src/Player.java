@@ -70,7 +70,7 @@ class Player {
         private int accioMaxDistanceThd = 5000;
         private int minAccioPower = 300;
         private int flipendoMinDistanceFromGoalThld = 2000;
-        private int flipendoMaxDistanceThld = 6000;
+        private int flipendoMaxDistanceThld = 5000;
         private int playersTooCloseThreshold = 2000;
         private int passingDistanceThld = 2000;
         
@@ -123,17 +123,17 @@ class Player {
                     //Snaffles have radius of 150. I'm going to use 300 to be sure I'm not hitting the pole.
                     //I'm also checking if I'm too close to the post. In that case, just throw it to the middle of the goal I guess.
                     
-                    if(myPlayers[i].y < game.getGoalTop(opponentTeam).y){
+                    if(myPlayers[i].y +300 < game.getGoalTop(opponentTeam).y){
                     	//If I'm too close to the post, I'd rather shoot to the center
                     	if(game.getDistance(myPlayers[i].position, game.getGoalTop(opponentTeam)) > 2000){
-                    		y = game.getGoalTop(opponentTeam).y + 500;
+                    		y = game.getGoalTop(opponentTeam).y + 300;
                     	} else {
                     		y = game.getGoal(opponentTeam).y;
                     	}
-                    } else if(myPlayers[i].y > game.getGoalBottom(opponentTeam).y){ 
+                    } else if(myPlayers[i].y -300 > game.getGoalBottom(opponentTeam).y){ 
                     	//If I'm too close to the post, I'd rather shoot to the center
                     	if(game.getDistance(myPlayers[i].position, game.getGoalBottom(opponentTeam)) > 2000){
-                    		y = game.getGoalBottom(opponentTeam).y - 500;
+                    		y = game.getGoalBottom(opponentTeam).y - 300;
                     	} else {
                     		y = game.getGoal(opponentTeam).y;
                     	}
@@ -156,7 +156,7 @@ class Player {
                     //System.err.println("snaffle velocity x "+targets[i].vx+"- y "+targets[i].vy);
                     
                     //I want my desired velocity to be in the direction of this target.
-                    Vector desiredVelocity = new Vector(x,y).minus(new Vector(myPlayers[i].position));
+                    Vector desiredVelocity = new Vector(x,y).minus(new Vector(myPlayers[i].futurePosition()));
                     Vector offset = desiredVelocity.minus(new Vector(myPlayers[i].vx*2, myPlayers[i].vy*2));
                     
                     x = myPlayers[i].x + (int)offset.x;
@@ -176,7 +176,7 @@ class Player {
                 result = useFlipendoShot(result, myPlayers, targets);
                 result = usePetrificus(result, myPlayers);
             }
-            
+            /*
             if(turns == 5){
             	Entity bludger = game.getBludgers().get(0);
            		Entity closestSnatcher = findNearest(bludger.position, game.getAllSnatchers());
@@ -188,6 +188,7 @@ class Player {
            		}
            		myMana -= obliviateCost;
             }
+            */
             
             return result;
              
