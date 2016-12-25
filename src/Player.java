@@ -67,7 +67,7 @@ class Player {
     	private final int obliviateCost = 5, petrificusCost = 10, accioCost = 15, flipendoCost = 20;
     	
         //Parameters
-        private int accioMinDistanceThld = 2000;
+        private int accioMinDistanceThld = 700;
         private int accioMaxDistanceThd = 5000;
         private int minAccioPower = 300;
         private int flipendoMinDistanceFromGoalThld = 2000;
@@ -263,7 +263,7 @@ class Player {
 			}
         	
         	for(int i=0; i<2; i++){
-                for(Entity snaffle : game.getSnuffles()){
+                for(Entity snaffle : game.getSnaffles()){
                     if(
                     (isFlipendoLinedToGoal(myPlayers[i], snaffle, myTeam) 
                     //No allied player too close to the snaffle or closest player to snaffle is not me
@@ -306,7 +306,7 @@ class Player {
 			
 			// A lot of trickery going on here. The target is to consider the closest snaffle to the opponent's goal first, and consider flipendoing
 			// with the closest player to that snaffle first.
-			List<Entity> snaffles = game.getSnuffles();
+			List<Entity> snaffles = game.getSnaffles();
 			snaffles.sort( (s1, s2) -> ((Double)(game.getDistanceFromGoal(s1, opponentTeam))).compareTo((game.getDistanceFromGoal(s2, opponentTeam))));
 			
 			for(Entity snaffle : snaffles){
@@ -361,7 +361,7 @@ class Player {
 			}
 			
 			for(int i=0; i<2; i++){
-                for(Entity snaffle : game.getSnuffles()){
+                for(Entity snaffle : game.getSnaffles()){
                      
                     if(
                     (isFlipendoLinedToGoal(myPlayers[i], snaffle, myTeam) 
@@ -410,7 +410,7 @@ class Player {
                 return result;
             }
             
-            for(Entity e : game.getSnuffles()){
+            for(Entity e : game.getSnaffles()){
                 if(shouldPetrify(e, myTeam)){
                     double distanceToClosestAlly = game.getDistance(e, findNearest(e.position, game.getAlliedSnatchers()));
                     double distanceToClosestOpponent = (game.getDistance(e, findNearest(e.position, game.getOpponentSnatchers())));
@@ -507,7 +507,7 @@ class Player {
                 //If it's too close, then there is no point -- wrong comment
                 //If it's too far, it won't do anything
                 if(game.getDistance(player, targets[i]) < accioMinDistanceThld ){
-                    //continue; //TODO: uncomment this line
+                    //continue; 
                 }
                 System.err.println("Accio power is "+getAccioPower(myPlayers[i], targets[i]));
                 //If accio power is too weak, don't do it.
@@ -575,9 +575,14 @@ class Player {
         
         private Entity[] choseTargets(Entity[] myPlayers){
             
-            List<Entity> snaffles = game.getSnuffles();
+            List<Entity> snaffles = game.getSnaffles();
+            
+            //This takes out all the snaffles from the offensive half of the field,
+            //to encourage defense when the situation requires the team to defend!
+            snaffles = filterSnaffles(snaffles);
             
             Entity[] targets = new Entity[2];
+            
             
             targets[0] = findNearestFuture( myPlayers[0], snaffles );
             targets[1] = findNearestFuture( myPlayers[1], snaffles ); 
@@ -768,17 +773,32 @@ class Player {
             
             for(Entity s : snaffles){
                 if(myTeam == 0){
-                    if(s.x < (16000/3)*2 ){
+                    if(s.x < (16000/2)*1 ){
                         snafflesInDefenseZone.add(s);
                     }
                 } else {
-                    if(s.x > (16000/3)*1 ){
+                    if(s.x > (16000/2)*1 ){
                         snafflesInDefenseZone.add(s);
                     }
                 }
             }
             
             return snafflesInDefenseZone;
+        }
+        
+        private List<Entity> filterSnaffles(List<Entity> snaffles){
+            if(snaffles.size() <= 3){
+                return snaffles;
+            }
+
+            List<Entity> snufflesInDefenseZone = getSnafflesInDefenseZone(snaffles);
+            
+            if(snufflesInDefenseZone.size() + game.getScore(opponentTeam) >= (totalSnaffles/2) +1 ){
+            	System.err.println("Defense");
+                return snufflesInDefenseZone;
+            } else {
+            	return snaffles;
+            }
         }
             
         
@@ -811,7 +831,7 @@ class Player {
         }
         
         public Entity findNearestSnuffle(Point position){
-            return findNearest(position, game.getSnuffles());
+            return findNearest(position, game.getSnaffles());
         }
         
         public Entity findNearestSnatcher(Point position){
@@ -994,7 +1014,7 @@ class Player {
             entitiesDict = new HashMap<Integer, Entity>();
         }
         
-        public List<Entity> getSnuffles(){
+        public List<Entity> getSnaffles(){
             return entities.stream()
             		.filter(e -> e.entityType.equals("SNAFFLE"))
             		.collect(Collectors.toList());
@@ -1032,7 +1052,7 @@ class Player {
         }
         
         public int getCountRemainingSnuffles(){
-            return getSnuffles().size();
+            return getSnaffles().size();
         }
         
         public double getDistance(Entity e1, Entity e2){
