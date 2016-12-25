@@ -20,6 +20,7 @@ class Player {
         // game loop
         while (true) {
         	myNapoleon.turns++;
+        	System.err.println("Turn "+myNapoleon.turns);
             // Inputs
             ///////////////////
             myGame.score[0] = in.nextInt();
@@ -45,7 +46,7 @@ class Player {
                 int vy = in.nextInt(); // velocity
                 int state = in.nextInt(); // 1 if the wizard is holding a Snaffle, 0 otherwise
                 
-                Entity e = myGame.updateEntity(id, entityType, x, y, vx, vy, state);
+                myGame.updateEntity(id, entityType, x, y, vx, vy, state);
             }
             
             ///////////////////
@@ -96,6 +97,8 @@ class Player {
         }
         
         public String[] think(){
+        	printSnafflesOnHalves();
+        	
             String[] result = new String[2];
             
             myMana++;
@@ -268,6 +271,7 @@ class Player {
                     //No allied player too close to the snaffle or closest player to snaffle is not me
                     && (game.getDistance(snaffle, myPlayers[i]) > 1500 || findNearest(snaffle.position, game.getAllSnatchers()).entityType == "OPPONENT_WIZARD")  	  
                     && game.getDistanceFromGoal(snaffle, myTeam) > flipendoMinDistanceFromGoalThld //TODO: take out?
+                    && game.getDistanceFromGoal(snaffle, opponentTeam) > flipendoMinDistanceFromGoalThld //TODO: take out?
                     && Math.abs(snaffle.vy) < 500	//If snaffle has too much vy, I might miss 
                     && game.getDistance(snaffle, findNearest(snaffle.position, game.getAllEntitiesExcept(snaffle))) > 650 //If something really close to the snaffle, abort
                     && targets[1-i].id != snaffle.id
@@ -316,8 +320,9 @@ class Player {
                     && game.getDistance(snaffle, myPlayers[i]) < flipendoMaxDistanceThld
                     ) ) {
                             
-                    	if(isThereObstacleBetweenSnaffleAndGoal(snaffle, myPlayers[i])){
-                            result[i] = "FLIPENDO "+snaffle.id;
+                    	if(isThereObstacleBetweenSnaffleAndGoal(snaffle, players.get(i))){
+                            result[i] = "FLIPENDO "+snaffle.id+" SupaShot";
+                            System.err.println("SupaShot");
                             flipendoedSnaffleId = snaffle.id;
                             flipendoDuration = 3;
                             myMana -= flipendoCost;
@@ -468,6 +473,10 @@ class Player {
                 if(flipendoDuration > 0 && targets[i].id ==flipendoedSnaffleId){
                     continue;
                 }
+            	//I have a snaffle. Let's throw it first, then accio later.
+            	if(player.state == 1){
+            		continue;
+            	}
                 if(usingAccio[i] > 0 ){
                     continue;
                 }
@@ -483,7 +492,7 @@ class Player {
                 if(game.getDistance(player, targets[i]) < accioMinDistanceThld ){
                     //continue; //TODO: uncomment this line
                 }
-                System.err.println(getAccioPower(myPlayers[i], targets[i]));
+                System.err.println("Accio power is "+getAccioPower(myPlayers[i], targets[i]));
                 //If accio power is too weak, don't do it.
                 if(getAccioPower(myPlayers[i], targets[i]) < minAccioPower){
                 	continue; 
@@ -563,6 +572,7 @@ class Player {
                 
                 for(int i=0; i<2;i++){
                     if(distanceFromSnaffle[i] > distanceFromSnaffle[1-i] ){
+                    	//Player i should be the attacker, since it's further away from the snaffle.
                         double distanceFromGoal = game.getDistanceFromGoal(myPlayers[1-i].position, opponentTeam);
                         
                         Point targetPoint = new Point(-1,-1);
@@ -578,9 +588,9 @@ class Player {
                         targetPoint.x = myPlayers[1-i].position.x + targetPoint.x * 2000;
                         targetPoint.y = myPlayers[1-i].position.y + targetPoint.y * 2000;
                         
-                        Entity temp = new Entity(snaffles.get(0).id, "PuntoNelVuoto");
-                        temp.updateInfo( targetPoint.x, targetPoint.y, 0, 0, 0);
-                        targets[i] = temp;
+                        Entity newTargetPosition = new Entity(snaffles.get(0).id, "PuntoNelVuoto");
+                        newTargetPosition.updateInfo( targetPoint.x, targetPoint.y, 0, 0, 0);
+                        targets[i] = newTargetPosition;
                         System.err.println("Attacker Split Behaviour");
                     }
                 }
@@ -640,8 +650,12 @@ class Player {
         		return false;
         	}
         	//The bounce needs a lot of power to it. You can't do it from too far away
-        	if(game.getDistanceFromGoal(player, myTeam) > 8000){
-        		return false;
+        	if(game.getDistanceFromGoal(player, opponentTeam) > 8000){
+        		//Also, the snaffle has to be close enough to you, or it won't travel far...
+        		//TODO: add this line back in. It's important.
+        		//if(game.getDistance(player, snaffle) > 3700){
+        			return false;
+        		//}
         	}
         	// We're too close to the goal to be thinking about bounces
         	if(myTeam == 0 && player.x > 13600 || team == 1 && player.x < 16000-13600){
@@ -649,6 +663,10 @@ class Player {
         	}
         	//If I'm extremely close to the snaffle, don't do anything
         	if(game.getDistance(player, snaffle) < 500){
+        		return false;
+        	}
+        	//If I'm looking at a snaffle held by an other player. he's gonna throw it and mess my bounce.
+        	if(snaffle.state == 1){
         		return false;
         	}
         	
@@ -998,9 +1016,9 @@ class Player {
         
         public double getDistanceFromGoal(Point start, int team){
             if(team==0){
-            	return getDistance(start, getGoal(1-team));
+            	return getDistance(start, getGoal(team));
             } else {
-            	return getDistance(start, getGoal(1-team));
+            	return getDistance(start, getGoal(team));
             }
         }
         
