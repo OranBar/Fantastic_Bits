@@ -590,6 +590,21 @@ class Player {
                 for(int i=0; i<2;i++){
                     if(distanceFromSnaffle[i] > distanceFromSnaffle[1-i] ){
                     	//Player i should be the attacker, since it's further away from the snaffle.
+                    	Vector defenderPos = new Vector(myPlayers[1-i].position);
+                    	Vector goalPos  = new Vector(game.getGoal(opponentTeam));
+                    	
+                    	Vector defenderToGoal = goalPos.minus(defenderPos);
+                    	defenderToGoal = defenderToGoal.norm();
+                    	
+                    	
+                    	Vector targetPosition = new Vector(myPlayers[1-i].position).add( (defenderToGoal.multiply(2000) ));
+                    	
+                    	Entity newTargetPosition = new Entity(snaffles.get(0).id, "PuntoNelVuoto");
+                        newTargetPosition.updateInfo( (int)targetPosition.x, (int)targetPosition.y, 0, 0, 0);
+                        targets[i] = newTargetPosition;
+                        System.err.println("Attacker Split Behaviour");
+                    	/*
+                    	
                         double distanceFromGoal = game.getDistanceFromGoal(myPlayers[1-i].position, opponentTeam);
                         
                         Point targetPoint = new Point(-1,-1);
@@ -609,6 +624,7 @@ class Player {
                         newTargetPosition.updateInfo( targetPoint.x, targetPoint.y, 0, 0, 0);
                         targets[i] = newTargetPosition;
                         System.err.println("Attacker Split Behaviour");
+                        */
                     }
                 }
                 return targets;                
