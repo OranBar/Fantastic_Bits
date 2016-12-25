@@ -159,7 +159,8 @@ class Player {
                     
                     //I want my desired velocity to be in the direction of this target.
                     Vector desiredVelocity = new Vector(x,y).minus(new Vector(myPlayers[i].futurePosition()));
-                    Vector offset = desiredVelocity.minus(new Vector(myPlayers[i].vx*2, myPlayers[i].vy*2));
+                    Vector offset = desiredVelocity.minus(new Vector(myPlayers[i].vx * 0.75, myPlayers[i].vy * 0.75));
+                    
                     
                     x = myPlayers[i].x + (int)offset.x;
                     y = myPlayers[i].y + (int)offset.y;
