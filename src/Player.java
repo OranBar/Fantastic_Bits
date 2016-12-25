@@ -97,7 +97,7 @@ class Player {
         }
         
         public String[] think(){
-        	printSnafflesOnHalves();
+        	//printSnafflesOnHalves();
         	
             String[] result = new String[2];
             
@@ -325,8 +325,8 @@ class Player {
 				for(int i=0; i<2; i++){
 					if(
                     (isFlipendoLinedToGoal(players.get(i), snaffle, myTeam) 
-            		&& game.getDistance(snaffle, myPlayers[i]) > 300 //I don't want the snaffle to be in my radius
-            		&& game.getDistance(snaffle, myPlayers[i]) < 6000
+            		&& game.getDistance(snaffle, players.get(i)) > 300 //I don't want the snaffle to be in my radius
+            		&& game.getDistance(snaffle, players.get(i)) < 6000
             		&& Math.abs(snaffle.vy) < 500
                     && game.getDistance(snaffle, players.get(i)) < flipendoMaxDistanceThld
                     && game.getDistance(snaffle, findNearest(snaffle.position, game.getAllEntitiesExcept(snaffle))) > 650 //If something really close to the snaffle, abort
@@ -342,6 +342,7 @@ class Player {
                         }
                     }
                     
+					/*
                     if(bounceGoalOpportunity(players.get(i), snaffle, myTeam) ){
                     	result[i] = "FLIPENDO "+snaffle.id+" Bounce Shot!!!" ;
                     	System.err.println("SupaBounce");
@@ -351,6 +352,7 @@ class Player {
                         
                         return result;
                     }
+                    */
                 }
             }
             return result;
