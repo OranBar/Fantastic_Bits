@@ -297,6 +297,13 @@ class Player {
     			List<Entity> possibleFlipendoTargets = new LinkedList<Entity>();
     			double opponentDistanceFromGoal = game.getDistanceFromGoal(candidateCaster, myTeam); 
     			
+    			//If there is only one snaffle on the field, he obviously flipendoed that one. Petrify it!! NOW!
+    			if(game.getSnaffles().size() == 1){
+    				possibleFlipendoTargets.add(game.getSnaffles().get(0));
+    				oneOfThoseMightHaveBeenFlipendoed = possibleFlipendoTargets;
+    				return;
+    			}
+    			
     			for(Entity snaffle : game.getSnaffles()){
     				if(snaffle.state == 0){
     					
