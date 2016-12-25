@@ -50,9 +50,11 @@ class Player {
             }
             
             ///////////////////
-            
             String[] moves = myNapoleon.think();
-            myNapoleon.previousGameState = (Game) myGame.clone();
+            if(myNapoleon.gameStatesHistory.size() >= 2){
+            	myNapoleon.gameStatesHistory.remove(0);
+            }
+            myNapoleon.gameStatesHistory.add((Game) myGame.clone());
             myNapoleon.prevTurnOpponentMana = myNapoleon.opponentMana;
             
             //Output - Movement
@@ -92,13 +94,17 @@ class Player {
         private int flipendoedSnaffleId = -1;
         private int flipendoDuration = 0;
         
-        private Game previousGameState=null;
+        private List<Game> gameStatesHistory;
+        
+        private List<Entity> oneOfThoseMightHaveBeenFlipendoed = new LinkedList<Entity>();
+        private int lastFlipendoDetectedTurn = -1;
         
           
         public Napoleon(Game game, int team){
             this.game = game;
             this.myTeam = team;
             this.opponentTeam = 1-myTeam;
+            gameStatesHistory = new LinkedList<Game>();
         }
         
         public String[] think(){
@@ -109,7 +115,7 @@ class Player {
             usingAccio[0]--;
             usingAccio[1]--;
            
-            detectOpponentSpellUse();
+            
             
             Entity[] myPlayers = new Entity[2];
             myPlayers[0] = game.getAlliedSnatchers().get(0);
@@ -181,13 +187,13 @@ class Player {
                 result = useAccio(result, myPlayers, targets);
                 result = usePetrificus(result, myPlayers);
             } else if(needOneMoreGoalToLoose()) {
+            	result = usePetrificus(result, myPlayers);
                 result = useFlipendoShot(result, myPlayers, targets);
                 result = useAccioDefensive(result, myPlayers, targets);
-                result = usePetrificus(result, myPlayers);
             } else {
+            	result = usePetrificus(result, myPlayers);
             	result = useAccio(result, myPlayers, targets);
                 result = useFlipendoShot(result, myPlayers, targets);
-                result = usePetrificus(result, myPlayers);
             }
             
             if(turns <= 6 && turns >= 2){
@@ -228,24 +234,33 @@ class Player {
             }
             */
             
+            detectOpponentSpellUse();
+            
             return result;
              
         }
         
         private void detectOpponentSpellUse(){
-        	if(previousGameState==null){
+        	oneOfThoseMightHaveBeenFlipendoed.clear();
+        	if(gameStatesHistory.size()<2){
         		return;
         	}
         	
         	//I'm subtracting the 1 mana point that the player earned at the beginning of his new turn
         	double manaDifference = Math.abs((opponentMana-1) - prevTurnOpponentMana);
+        	if(manaDifference == 0){
+        		if(turns - lastFlipendoDetectedTurn >= 3){
+        			oneOfThoseMightHaveBeenFlipendoed.clear();
+        		}
+        		return;
+        	}
         	
         	Entity candidateCaster = null;
         	double temp = 1000;
         	
         	for(Entity opponent : game.getOpponentSnatchers()){
         		int opponentId = opponent.id;
-        		double positionDifferenceFromExpectedIfNotMoved = game.getDistance(game.entitiesDict.get(opponentId).position, previousGameState.entitiesDict.get(opponentId).futurePosition());
+        		double positionDifferenceFromExpectedIfNotMoved = game.getDistance(game.entitiesDict.get(opponentId).position, gameStatesHistory.get(1).entitiesDict.get(opponentId).futurePosition());
         		
         		if(positionDifferenceFromExpectedIfNotMoved < temp){
         			temp = positionDifferenceFromExpectedIfNotMoved;
@@ -263,6 +278,34 @@ class Player {
     		}
     		if(manaDifference == flipendoCost){
     			System.err.println("Flipendo Used by "+candidateCaster.id);
+    			lastFlipendoDetectedTurn = turns;
+    			
+    			List<Entity> possibleFlipendoTargets = new LinkedList<Entity>();
+    			double opponentDistanceFromGoal = game.getDistanceFromGoal(candidateCaster, myTeam); 
+    			
+    			for(Entity snaffle : game.getSnaffles()){
+    				if(snaffle.state == 0){
+    					
+    					if(game.getDistanceFromGoal(snaffle, myTeam) < opponentDistanceFromGoal){
+    						if(isFlipendoLinedToGoal(candidateCaster, snaffle, opponentTeam)){
+    							possibleFlipendoTargets.add(snaffle);
+    						} else {
+    							System.err.println("I'm thinking "+snaffle.id+" but it isn't lined to the goal, according to my math");
+    						}
+    					}
+    				}
+    			}
+    			
+    			if(possibleFlipendoTargets.size() == 0){
+    				//He is probably looking for a bounce shot... For now I'll ignore this case, since I have more time to stop it,
+    				//so hopefully, the petrificus code will do that.
+    			}
+    				
+    			possibleFlipendoTargets.stream().forEach(e -> System.err.println("Maybe he is flipendoing "+e.id));
+    			
+    			if(possibleFlipendoTargets.size() != 0){
+    				oneOfThoseMightHaveBeenFlipendoed = possibleFlipendoTargets;
+    			}
     		}
         }
         
@@ -451,12 +494,46 @@ class Player {
                 return result;
             }
             
+            System.err.println("Now turn "+turns+" Flipendo was detected on turn "+lastFlipendoDetectedTurn
+            		+" There are "+oneOfThoseMightHaveBeenFlipendoed.size()+" snaffles in my maybe list");
+            //Petrificus a flipendoed snaffle using the detection and guessing tecnique.
+            for(Entity s : oneOfThoseMightHaveBeenFlipendoed){
+            	Entity snaffle = game.entitiesDict.get(s.id);
+            	boolean tooLateToStopIt = game.getDistanceFromGoal(snaffle, myTeam) < 2700;
+    			
+            	//System.err.println("Snaffle distance from goal is "+game.getDistanceFromGoal(snaffle, myTeam));
+            	
+    			if(tooLateToStopIt){
+    				System.err.println("Can't stop "+snaffle.id+" now, it's too close");
+    				break;
+    			}
+    			
+            	//This snaffle is moving towards my goal.
+    			
+            	System.err.println("Checking if I should petrify "+snaffle.id+", since it might have been flipendoed");
+            	System.err.println("Its x velocity last turn was "+game.entitiesDict.get(snaffle.id).vx);
+            	System.err.println("Its x velocity now is "+snaffle.vx);
+            	System.err.println("Its x position last turn was "+gameStatesHistory.get(1).entitiesDict.get(snaffle.id).x);
+            	System.err.println("Its x position now is "+snaffle.x);
+            	
+            	if((opponentTeam == 0 && snaffle.x > gameStatesHistory.get(1).entitiesDict.get(snaffle.id).x)
+            	|| (opponentTeam == 1 && snaffle.x < gameStatesHistory.get(1).entitiesDict.get(snaffle.id).x)){
+            		if(game.getDistance(myPlayers[0], snaffle) < game.getDistance(myPlayers[1], snaffle)){
+                        result[1] = "PETRIFICUS "+snaffle.id+" Guess";
+                        myMana -= petrificusCost;
+                        return result;
+                    } else {
+                        result[0] = "PETRIFICUS "+snaffle.id+" Guess";
+                        myMana -= petrificusCost;
+                        return result;
+                    }
+            	}
+            }
+            
             for(Entity e : game.getSnaffles()){
                 if(shouldPetrify(e, myTeam)){
                     double distanceToClosestAlly = game.getDistance(e, findNearest(e.position, game.getAlliedSnatchers()));
                     double distanceToClosestOpponent = (game.getDistance(e, findNearest(e.position, game.getOpponentSnatchers())));
-                    
-                    
                     
                     //Petrificus + Accio is an incredible defensive combo, although it is very expensive.
                     if(myMana >= accioCost){
@@ -892,7 +969,7 @@ class Player {
         }
         
         public boolean isLined(Entity player, Entity snaffle, Point goal1, Point goal2){
-            Point snafflePos = new Point((int) snaffle.x + snaffle.vx, (int) snaffle.y + snaffle.vy);
+            Point snafflePos = new Point((int) snaffle.futurePosition().x, (int) snaffle.futurePosition().y);
             
             double areaBig = getTriangleArea(player.position, goal1, goal2);
             double a1 = getTriangleArea(snafflePos, goal1, goal2) ;
