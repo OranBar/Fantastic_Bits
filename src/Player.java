@@ -311,13 +311,25 @@ class Player {
 				return result;
 			}
 			
-			for(int i=0; i<2; i++){
-                for(Entity snaffle : game.getSnuffles()){
-                     
-                    if(
-                    (isFlipendoLinedToGoal(myPlayers[i], snaffle, myTeam) 
-                    && Math.abs(snaffle.vy) < 500
-                    && game.getDistance(snaffle, myPlayers[i]) < flipendoMaxDistanceThld
+			// A lot of trickery going on here. The target is to consider the closest snaffle to the opponent's goal first, and consider flipendoing
+			// with the closest player to that snaffle first.
+			List<Entity> snaffles = game.getSnuffles();
+			snaffles.sort( (s1, s2) -> ((Double)(game.getDistanceFromGoal(s1, opponentTeam))).compareTo((game.getDistanceFromGoal(s2, opponentTeam))));
+			
+			for(Entity snaffle : snaffles){
+				List<Entity> players = new LinkedList<Entity>();
+				players.add(myPlayers[0]);
+				players.add(myPlayers[1]);
+				players.sort( (p1, p2) -> ((Double)game.getDistance(p1, snaffle)).compareTo(game.getDistance(p2, snaffle)) ) ;
+				
+				for(int i=0; i<2; i++){
+					if(
+                    (isFlipendoLinedToGoal(players.get(i), snaffle, myTeam) 
+            		&& game.getDistance(snaffle, myPlayers[i]) > 300 //I don't want the snaffle to be in my radius
+            		&& game.getDistance(snaffle, myPlayers[i]) < 6000
+            		&& Math.abs(snaffle.vy) < 500
+                    && game.getDistance(snaffle, players.get(i)) < flipendoMaxDistanceThld
+                    && game.getDistance(snaffle, findNearest(snaffle.position, game.getAllEntitiesExcept(snaffle))) > 650 //If something really close to the snaffle, abort
                     ) ) {
                             
                     	if(isThereObstacleBetweenSnaffleAndGoal(snaffle, players.get(i))){
@@ -328,7 +340,16 @@ class Player {
                             myMana -= flipendoCost;
                             return result;
                         }
+                    }
+                    
+                    if(bounceGoalOpportunity(players.get(i), snaffle, myTeam) ){
+                    	result[i] = "FLIPENDO "+snaffle.id+" Bounce Shot!!!" ;
+                    	System.err.println("SupaBounce");
+                        flipendoedSnaffleId = snaffle.id;
+                        flipendoDuration = 3;
+                        myMana -= flipendoCost;
                         
+                        return result;
                     }
                 }
             }
