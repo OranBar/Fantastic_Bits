@@ -788,11 +788,7 @@ class Player {
         }
         
         private List<Entity> filterSnaffles(List<Entity> snaffles){
-            if(snaffles.size() <= 3){
-                return snaffles;
-            }
-
-            List<Entity> snufflesInDefenseZone = getSnafflesInDefenseZone(snaffles);
+                        List<Entity> snufflesInDefenseZone = getSnafflesInDefenseZone(snaffles);
             
             if(snufflesInDefenseZone.size() + game.getScore(opponentTeam) >= (totalSnaffles/2) +1 ){
             	System.err.println("Defense");
