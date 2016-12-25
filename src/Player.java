@@ -236,6 +236,20 @@ class Player {
             
             detectOpponentSpellUse();
             
+            //I think I know which snaffle he flipendoed. Let's petrify it.
+            if(oneOfThoseMightHaveBeenFlipendoed.size() == 1 
+            && myMana > petrificusCost){
+            	Entity flipendoedSnaffle = oneOfThoseMightHaveBeenFlipendoed.get(0);
+            	if(game.getDistance(myPlayers[0], flipendoedSnaffle) < game.getDistance(myPlayers[1], flipendoedSnaffle)){
+                    result[1] = "PETRIFICUS "+flipendoedSnaffle.id;
+                    myMana -= petrificusCost;
+                    
+                } else {
+                    result[0] = "PETRIFICUS "+flipendoedSnaffle.id;
+                    myMana -= petrificusCost;
+                }
+            }
+            
             return result;
              
         }
@@ -493,10 +507,11 @@ class Player {
             if(myMana < petrificusCost){
                 return result;
             }
-            
+            /*
             System.err.println("Now turn "+turns+" Flipendo was detected on turn "+lastFlipendoDetectedTurn
             		+" There are "+oneOfThoseMightHaveBeenFlipendoed.size()+" snaffles in my maybe list");
             //Petrificus a flipendoed snaffle using the detection and guessing tecnique.
+            
             for(Entity s : oneOfThoseMightHaveBeenFlipendoed){
             	Entity snaffle = game.entitiesDict.get(s.id);
             	boolean tooLateToStopIt = game.getDistanceFromGoal(snaffle, myTeam) < 2700;
@@ -529,6 +544,7 @@ class Player {
                     }
             	}
             }
+            */
             
             for(Entity e : game.getSnaffles()){
                 if(shouldPetrify(e, myTeam)){
