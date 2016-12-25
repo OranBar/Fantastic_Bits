@@ -97,8 +97,6 @@ class Player {
         }
         
         public String[] think(){
-        	//printSnafflesOnHalves();
-        	
             String[] result = new String[2];
             
             myMana++;
@@ -270,7 +268,6 @@ class Player {
                     (isFlipendoLinedToGoal(myPlayers[i], snaffle, myTeam) 
                     //No allied player too close to the snaffle or closest player to snaffle is not me
                     && (game.getDistance(snaffle, myPlayers[i]) > 1500 || findNearest(snaffle.position, game.getAllSnatchers()).entityType == "OPPONENT_WIZARD")  	  
-                    && game.getDistanceFromGoal(snaffle, myTeam) > flipendoMinDistanceFromGoalThld //TODO: take out?
                     && game.getDistanceFromGoal(snaffle, opponentTeam) > flipendoMinDistanceFromGoalThld //TODO: take out?
                     && Math.abs(snaffle.vy) < 500	//If snaffle has too much vy, I might miss 
                     && game.getDistance(snaffle, findNearest(snaffle.position, game.getAllEntitiesExcept(snaffle))) > 650 //If something really close to the snaffle, abort
