@@ -52,6 +52,8 @@ class Player {
             ///////////////////
             
             String[] moves = myNapoleon.think();
+            myNapoleon.previousGameState = (Game) myGame.clone();
+            myNapoleon.prevTurnOpponentMana = myNapoleon.opponentMana;
             
             //Output - Movement
             ///////////////////
@@ -82,12 +84,15 @@ class Player {
         
         public int myMana = -1;
         public int opponentMana = -1;
+        public int prevTurnOpponentMana = -1;
         public int totalSnaffles = -1;
         
         private int[] usingAccio = new int[]{0,0};
         
         private int flipendoedSnaffleId = -1;
         private int flipendoDuration = 0;
+        
+        private Game previousGameState=null;
         
           
         public Napoleon(Game game, int team){
@@ -104,6 +109,7 @@ class Player {
             usingAccio[0]--;
             usingAccio[1]--;
            
+            detectOpponentSpellUse();
             
             Entity[] myPlayers = new Entity[2];
             myPlayers[0] = game.getAlliedSnatchers().get(0);
@@ -224,6 +230,40 @@ class Player {
             
             return result;
              
+        }
+        
+        private void detectOpponentSpellUse(){
+        	if(previousGameState==null){
+        		return;
+        	}
+        	
+        	//I'm subtracting the 1 mana point that the player earned at the beginning of his new turn
+        	double manaDifference = Math.abs((opponentMana-1) - prevTurnOpponentMana);
+        	
+        	Entity candidateCaster = null;
+        	double temp = 1000;
+        	
+        	for(Entity opponent : game.getOpponentSnatchers()){
+        		int opponentId = opponent.id;
+        		double positionDifferenceFromExpectedIfNotMoved = game.getDistance(game.entitiesDict.get(opponentId).position, previousGameState.entitiesDict.get(opponentId).futurePosition());
+        		
+        		if(positionDifferenceFromExpectedIfNotMoved < temp){
+        			temp = positionDifferenceFromExpectedIfNotMoved;
+        			candidateCaster = opponent;
+        		}
+        	}
+        	
+        	System.err.println("Mana Difference "+manaDifference);
+        	
+        	if(manaDifference == petrificusCost){
+    			System.err.println("Petrificus Used by "+candidateCaster.id);
+    		}
+    		if(manaDifference == accioCost){
+    			System.err.println("Accio Used by "+candidateCaster.id);
+    		}
+    		if(manaDifference == flipendoCost){
+    			System.err.println("Flipendo Used by "+candidateCaster.id);
+    		}
         }
         
         private boolean shouldThisPlayerPassToTheOther(Entity player0, Entity player1){
@@ -949,20 +989,28 @@ class Player {
         
         /** Does not take into account friction */
         public Point futurePosition(){
-        	Point newPoint = (Point)this.position.clone(); 
-        	newPoint.translate(vx, vy);
+        	Point newPoint = (Point)this.position.clone();
+        	if(entityType.contains("WIZARD")){
+        		newPoint.translate((int)(vx*0.75), (int)(vy*0.75));
+        	} 
+        	if(entityType.equals("SNAFFLE")){
+        		newPoint.translate((int)(vx*0.75), (int)(vy*0.75));
+        	}
+        	if(entityType.equals("BLUDGER")){
+        		newPoint.translate((int)(vx*0.9), (int)(vy*0.9));
+        	}
         	return newPoint;
         }
     }
     
     public static class Game {
         
-    	public final Point 	goal0_center = new Point(   0  , 3750 );
-    	public final Point	goal0_top    = new Point(   0  , 3750-(2000-300) );
-    	public final Point	goal0_bottom = new Point(   0  , 3750+(2000-300) );
-    	public final Point	goal1_center = new Point( 16000, 3750 );
-    	public final Point	goal1_top    = new Point( 16000, 3750-(2000-300) );
-    	public final Point	goal1_bottom = new Point( 16000, 3750+(2000-300) );
+    	public static final Point 	goal0_center = new Point(   0  , 3750 );
+    	public static final Point	goal0_top    = new Point(   0  , 3750-(2000-300) );
+    	public static final Point	goal0_bottom = new Point(   0  , 3750+(2000-300) );
+    	public static final Point	goal1_center = new Point( 16000, 3750 );
+    	public static final Point	goal1_top    = new Point( 16000, 3750-(2000-300) );
+    	public static final Point	goal1_bottom = new Point( 16000, 3750+(2000-300) );
     	
         public int[] score = new int[2];       
         
@@ -1090,6 +1138,24 @@ class Player {
         public Point getGoalBottom(int team){
             return (Point) ((team==0) ? goal0_bottom.clone() : goal1_bottom.clone());
                 
+        }
+        
+        @Override
+        protected Object clone() {
+        	Game clone = new Game();
+        	
+        	clone.score = (int[])this.score.clone();       
+            clone.entities = new LinkedList<Entity>();
+            for(Entity e : this.entities){
+            	clone.entities.add(new Entity(e));
+            }
+        	
+            clone.entitiesDict = new HashMap<Integer, Entity>();
+            for(Integer key : this.entitiesDict.keySet()){
+            	Entity e = entitiesDict.get(key);
+            	clone.entitiesDict.put(key, new Entity(e));
+            }
+        	return clone;
         }
     }
     
