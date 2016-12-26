@@ -99,6 +99,8 @@ class Player {
         private List<Entity> oneOfThoseMightHaveBeenFlipendoed = new LinkedList<Entity>();
         private int lastFlipendoDetectedTurn = -1;
         
+        private int flipendoDetected = 0;
+        
           
         public Napoleon(Game game, int team){
             this.game = game;
@@ -112,6 +114,7 @@ class Player {
             
             myMana++;
             flipendoDuration--;
+            flipendoDetected--;
             usingAccio[0]--;
             usingAccio[1]--;
            
@@ -122,6 +125,8 @@ class Player {
             myPlayers[1] = game.getAlliedSnatchers().get(1);
             
             Entity[] targets = choseTargets(myPlayers);
+            
+            detectOpponentSpellUse();
             
             for(int i=0; i<2; i++){
             	if(myPlayers[i].state == 0){
@@ -234,7 +239,7 @@ class Player {
             }
             */
             
-            detectOpponentSpellUse();
+           
             
             System.err.println("There are "+oneOfThoseMightHaveBeenFlipendoed.size()+" flipendo maybes");
             System.err.println("I have "+myMana+" mana, while petrificus costs "+petrificusCost);
@@ -294,6 +299,8 @@ class Player {
     			System.err.println("Accio Used by "+candidateCaster.id);
     		}
     		if(manaDifference == flipendoCost){
+    			flipendoDetected = 4; //Until this variable is 0, I can't flipendo. This will give me time to petrify his flipendo, if it was a dangerous one. 
+    			
     			System.err.println("Flipendo Used by "+candidateCaster.id);
     			lastFlipendoDetectedTurn = turns;
     			
@@ -369,7 +376,9 @@ class Player {
         	if(myMana < flipendoCost){
 				return result;
 			}
-        	if(opponentMana >= flipendoCost && myMana - flipendoCost >= petrificusCost ){
+        	
+        	if(opponentMana >= flipendoCost && myMana - flipendoCost >= petrificusCost 
+        	|| flipendoDetected > 0){
             	return result;
             }
         	
