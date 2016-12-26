@@ -206,6 +206,9 @@ class Player {
             	Entity incomingBludger = findNearest(game.getGoal(myTeam), game.getBludgers());
             	Entity bludgersTargetPlayer = findNearestFuture(incomingBludger, game.getAlliedSnatchers());
                  
+            	//TODO: Use orthogonal vector to flee
+            	
+            	
                 for(int i=0; i<2; i++){
                 	 Entity player = myPlayers[i];
                 	 if(player.id == bludgersTargetPlayer.id){
@@ -1065,14 +1068,20 @@ class Player {
     
     public static class Entity{
         
+    	public static final int BLUDGER_THRUST = 1000, MAX_WIZARD_THRUST = 150;
+    	
         public int id; // entity identifier
         public String entityType ; // "WIZARD", "OPPONENT_WIZARD" or "SNAFFLE" (or "BLUDGER" after first league)
         public int vx; // velocity
         public int vy; // velocity
-        public int state; // 1 if the wizard is holding a Snaffle, 0 otherwise
         public int x;
         public int y;
         public Point position;
+        
+        // 1 if the wizard is holding a Snaffle, 0 otherwise
+        // 1 was grabbed by a wizard, 0 otherwise
+        public int state; 
+        
         
         public Entity(Entity entity){
             this.id = entity.id;
@@ -1118,7 +1127,90 @@ class Player {
 				&& y == entity.y;
 	    }
         
+        protected double getFriction(){
+        	switch(entityType){
+	        	case "WIZARD":
+	        	case "OPPONENT_WIZARD":
+	        	case "SNAFFLE":
+	        		return 0.75;
+	        	case "BLUDGER":
+	        		return 0.9;
+	        		
+	        	default:
+	        		System.err.println("Error: This doesn't make any sense");
+	        		return 1;
+        	}
+        }
+        
+        protected double getMass(){
+        	switch(entityType){
+        	case "WIZARD":
+        	case "OPPONENT_WIZARD":
+        		return 1;
+        	case "SNAFFLE":
+        		return 0.5;
+        	case "BLUDGER":
+        		return 8;
+        		
+        	default:
+        		System.err.println("Error: This doesn't make any sense");
+        		return 1;
+    	}
+        }
+        
+        
+        public Entity futureTurn(){
+        	Point futurePosition = futurePosition();
+        	Vector futureSpeed = new Vector(vx, vy).multiply(getFriction());
+        	
+        	Entity future = new Entity(id, entityType);
+        	//TODO: BUG - I don't really know the future state, and can't know unless I implement collisions and full turn prediction.
+        	//I'll put -1, so it will error the program when used.
+        	future.updateInfo(futurePosition.x, futurePosition.y, futureSpeed.x, futureSpeed.y, -1);
+        	
+        	return future;
+        }
+        
+        public Entity futureTurn(Vector moveTarget, int thrust){
+        	Point futurePosition = futurePosition(moveTarget, thrust);
+        	Vector futureSpeed = computeSpeed(moveTarget, thrust).multiply(getFriction());
+        	
+        	Entity future = new Entity(id, entityType);
+        	//TODO: BUG - I don't really know the future state, and can't know unless I implement collisions and full turn prediction.
+        	//I'll put -1, so it will error the program when used.
+        	future.updateInfo(futurePosition.x, futurePosition.y, futureSpeed.x, futureSpeed.y, -1);
+        	
+        	return future;
+        }
+        
+        public Point futurePosition(){
+        	return new Point(x + vx, y + vy);
+        }
+        
+        public Point futurePosition(Vector moveTarget, int thrust){
+        	Vector myPosition = new Vector(position);
+        	Vector newSpeed = computeSpeed(moveTarget, thrust);
+        	
+        	return new Point(myPosition.x + newSpeed.x, myPosition.y + newSpeed.y);
+        	
+        }
+        
+        public Vector computeSpeed(Vector moveTarget, int thrust){
+        	Vector myPosition = new Vector(position);
+        	Vector direction = moveTarget.minus(myPosition).norm();
+        	
+        	Vector currSpeed = new Vector(vx, vy);
+        	Vector newSpeed = null;
+        	
+        	newSpeed = currSpeed.add(direction.multiply( thrust / getMass()));
+        	
+        	return newSpeed;
+        }
+        
+       
+        
         /** Does not take into account friction */
+        /*
         public Point futurePosition(){
         	Point newPoint = (Point)this.position.clone();
         	if(entityType.contains("WIZARD")){
@@ -1132,6 +1224,7 @@ class Player {
         	}
         	return newPoint;
         }
+        */
     }
     
     public static class Game {
@@ -1235,6 +1328,10 @@ class Player {
             return getDistance(e1.position, e2.position);
         }
         
+        public double getDistance(Vector start, Vector end){
+            return Math.sqrt(Math.pow(start.x-end.x,2)+Math.pow(start.y-end.y,2));
+        }
+        
         public double getDistance(Point start, Point end){
            return Math.sqrt(Math.pow(start.x-end.x,2)+Math.pow(start.y-end.y,2));
         }
@@ -1302,10 +1399,18 @@ class Player {
             return String.format("%.3f", d);
         }
 
-        public final double x;
+        public final int x;
 
-        public final double y;
+        public final int y;
 
+        private double getDoubleX(){
+        	return (double) x;
+        }
+        
+        private double getDoubleY(){
+        	return (double) x;
+        }
+        
         /**
          * Used in the equals method in order to consider two double are "equals"
          */
@@ -1328,6 +1433,11 @@ class Player {
          *  the y value of the vector
          */
         public Vector(double x, double y) {
+            this.x = (int) x;
+            this.y = (int) y;
+        }
+        
+        public Vector(int x, int y) {
             this.x = x;
             this.y = y;
         }
@@ -1513,6 +1623,8 @@ class Player {
             return "[x=" + doubleToString(x) + ", y=" + doubleToString(y) + "]";
         }
     }
+    
+    
     
     public static class Line {
         private double slope;
