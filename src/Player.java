@@ -367,6 +367,11 @@ class Player {
 				return result;
 			}
         	
+        	//If I do this, I won't be able to petrify his next flipendo
+            if(petrificusCost - (myMana - flipendoCost) > flipendoCost - opponentMana){
+            	return result;
+        	}
+        	
         	for(int i=0; i<2; i++){
                 for(Entity snaffle : game.getSnaffles()){
                     if(
@@ -626,10 +631,18 @@ class Player {
                 return result;
             }
             
+            //If I do this, I won't be able to petrify his next flipendo
+            if(petrificusCost - (myMana - accioCost) > flipendoCost - opponentMana){
+            	return result;
+        	}
+            
             for(int i=0; i<2; i++){
             	Entity player = myPlayers[i];
-                if(flipendoDuration > 0 && targets[i].id ==flipendoedSnaffleId){
+                if(flipendoDuration > 0 && targets[i].id == flipendoedSnaffleId){
                     continue;
+                }
+                if(targets[i].id == targets[1-i].id && usingAccio[1-i] > 0){
+                	continue;
                 }
             	//I have a snaffle. Let's throw it first, then accio later.
             	if(player.state == 1){
@@ -655,6 +668,11 @@ class Player {
                 if(getAccioPower(myPlayers[i], targets[i]) < minAccioPower){
                 	continue; 
                 }
+                //If the ball will be closer to me next turn, probably the other player passed it to me. No point in accio-ing.
+                if(game.getDistance(myPlayers[i], targets[i]) < game.getDistance(myPlayers[i].position, targets[i].futurePosition())){
+                    continue;
+                }
+
                 
                 if(findNearest(targets[i].position, game.getAllSnatchers()).id != player.id){
                     result[i] = "ACCIO "+targets[i].id;
@@ -671,6 +689,7 @@ class Player {
             if(myMana < accioCost){
                 return result;
             }
+            
             
             //When doing a defensive accio, I want the closest player to be the one accio-ing, since it will have more power. The other guy will wait for the pass
             if(game.getDistance(myPlayers[1], targets[1]) < game.getDistance(myPlayers[0], targets[0])){
@@ -695,6 +714,9 @@ class Player {
                 if(targets[i].id == targets[1-i].id && usingAccio[1-i] > 0){
                 	continue;
                 }
+                if(player.state == 1){
+            		continue;
+            	}
                 //Don't accio things in front of you, only backwards
                 if(myTeam == 0 && player.x < targets[i].x ){
                     continue;                    
@@ -711,10 +733,6 @@ class Player {
                 //If accio power is too weak, don't do it.
                 if(getAccioPower(myPlayers[i], targets[i]) < minAccioPower){
                 	continue; 
-                }
-                //If the ball will be closer to me next turn, probably the other player passed it to me. No point in accio-ing.
-                if(game.getDistance(myPlayers[i], targets[i]) < game.getDistance(myPlayers[i].position, targets[i].futurePosition())){
-                	continue;
                 }
                 
                 
