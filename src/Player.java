@@ -448,14 +448,13 @@ class Player {
 				players.add(myPlayers[0]);
 				players.add(myPlayers[1]);
 				players.sort( (p1, p2) -> ((Double)game.getDistance(p1, snaffle)).compareTo(game.getDistance(p2, snaffle)) ) ;
+				boolean playersSwapped = false;
+				
 				if( game.getDistance(myPlayers[1], snaffle) < game.getDistance(myPlayers[0], snaffle) ){
 					Entity temp = myPlayers[0];
 					myPlayers[0] = myPlayers[1];
 					myPlayers[1] = temp;
-					
-					String temp2 = result[0];
-					result[0] = result[1];
-					result[1] = temp2; 
+					playersSwapped = true;
 				}
 				
 				
@@ -471,7 +470,11 @@ class Player {
                     ) ) {
                             
                     	if(isThereObstacleBetweenSnaffleAndGoal(snaffle, players.get(i))){
-                            result[i] = "FLIPENDO "+snaffle.id+" SupaShot";
+                    		if(playersSwapped){
+                    			result[1-i] = "FLIPENDO "+snaffle.id+" SupaShot";
+                    		} else {
+                    			result[i] = "FLIPENDO "+snaffle.id+" SupaShot";
+                    		}
                             System.err.println("SupaShot");
                             flipendoedSnaffleId = snaffle.id;
                             flipendoDuration = 3;
