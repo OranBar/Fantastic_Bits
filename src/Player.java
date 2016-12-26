@@ -1,4 +1,5 @@
 import java.util.*;
+import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 import java.awt.Point;
 
@@ -376,11 +377,12 @@ class Player {
         	if(myMana < flipendoCost){
 				return result;
 			}
-        	
-        	if(opponentMana >= flipendoCost && myMana - flipendoCost >= petrificusCost 
+        	/*
+        	if( (petrificusCost - (myMana - flipendoCost) > flipendoCost - opponentMana )
         	|| flipendoDetected > 0){
-            	return result;
+        		return result;
             }
+        	*/
         	
         	for(int i=0; i<2; i++){
                 for(Entity snaffle : game.getSnaffles()){
@@ -1089,6 +1091,15 @@ class Player {
         
             return Math.sqrt(sp * (sp - v1v2)*(sp - v2v3)*(sp - v3v1));
         }
+        
+        private <E> HashMap<E, Integer> rank(List<E> entries, BiFunction<Game,E,Integer> rankingFunction){
+        	HashMap<E, Integer> result = new HashMap<E, Integer>();
+        	for(E entry : entries){
+        		result.put(entry, rankingFunction.apply(game, entry));
+        	}
+        	return result;
+        }
+        
     }
     
     
