@@ -236,6 +236,9 @@ class Player {
             
             detectOpponentSpellUse();
             
+            System.err.println("There are "+oneOfThoseMightHaveBeenFlipendoed.size()+" flipendo maybes");
+            System.err.println("I have "+myMana+" mana, while petrificus costs "+petrificusCost);
+            
             //I think I know which snaffle he flipendoed. Let's petrify it.
             if(oneOfThoseMightHaveBeenFlipendoed.size() == 1 
             && myMana > petrificusCost){
@@ -366,11 +369,9 @@ class Player {
         	if(myMana < flipendoCost){
 				return result;
 			}
-        	
-        	//If I do this, I won't be able to petrify his next flipendo
-            if(petrificusCost - (myMana - flipendoCost) > flipendoCost - opponentMana){
+        	if(opponentMana >= flipendoCost && myMana - flipendoCost >= petrificusCost ){
             	return result;
-        	}
+            }
         	
         	for(int i=0; i<2; i++){
                 for(Entity snaffle : game.getSnaffles()){
