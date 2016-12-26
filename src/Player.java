@@ -332,6 +332,17 @@ class Player {
     				//He is probably looking for a bounce shot... For now I'll ignore this case, since I have more time to stop it,
     				//so hopefully, the petrificus code will do that.
     			}
+    			if(possibleFlipendoTargets.size() > 1){
+    				//This is a really far ball. Let's assume he didn't hit that one
+    				List<Entity> snafflesToRemove = new LinkedList<Entity>();
+    				
+    				for(Entity snaffle : possibleFlipendoTargets){
+						if(game.getDistance(snaffle, candidateCaster) > 8000){
+							snafflesToRemove.add(snaffle);
+						}
+    				}
+    				possibleFlipendoTargets.removeAll(snafflesToRemove);
+    			}
     				
     			possibleFlipendoTargets.stream().forEach(e -> System.err.println("Maybe he is flipendoing "+e.id));
     			
@@ -433,15 +444,27 @@ class Player {
 			
 			for(Entity snaffle : snaffles){
 				List<Entity> players = new LinkedList<Entity>();
+				
 				players.add(myPlayers[0]);
 				players.add(myPlayers[1]);
 				players.sort( (p1, p2) -> ((Double)game.getDistance(p1, snaffle)).compareTo(game.getDistance(p2, snaffle)) ) ;
+				if( game.getDistance(myPlayers[1], snaffle) < game.getDistance(myPlayers[0], snaffle) ){
+					Entity temp = myPlayers[0];
+					myPlayers[0] = myPlayers[1];
+					myPlayers[1] = temp;
+					
+					String temp2 = result[0];
+					result[0] = result[1];
+					result[1] = temp2; 
+				}
+				
 				
 				for(int i=0; i<2; i++){
 					if(
                     (isFlipendoLinedToGoal(players.get(i), snaffle, myTeam) 
             		&& game.getDistance(snaffle, players.get(i)) > 300 //I don't want the snaffle to be in my radius
             		&& game.getDistance(snaffle, players.get(i)) < 6000
+            		&& game.getDistanceFromGoal(snaffle, opponentTeam) > 1500 //TODO: take out?
             		&& Math.abs(snaffle.vy) < 500
                     && game.getDistance(snaffle, players.get(i)) < flipendoMaxDistanceThld
                     && game.getDistance(snaffle, findNearest(snaffle.position, game.getAllEntitiesExcept(snaffle))) > 650 //If something really close to the snaffle, abort
