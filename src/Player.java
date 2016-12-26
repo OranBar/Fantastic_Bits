@@ -1069,6 +1069,9 @@ class Player {
     public static class Entity{
         
     	public static final int BLUDGER_THRUST = 1000, MAX_WIZARD_THRUST = 150;
+    	public static final int RADIUS_WIZARD = 400, RADIUS_SNAFFLE = 150, RADIUS_BLUDGER = 200;
+    	public static final double FRICTION_WIZARD = 0.75, FRICTION_SNAFFLE = 0.75, FRICTION_BLUDGER = 0.9;
+    	public static final double MASS_WIZARD = 1, MASS_SNAFFLE = 0.5, MASS_BLUDGER = 8;
     	
         public int id; // entity identifier
         public String entityType ; // "WIZARD", "OPPONENT_WIZARD" or "SNAFFLE" (or "BLUDGER" after first league)
@@ -1127,38 +1130,6 @@ class Player {
 				&& y == entity.y;
 	    }
         
-        protected double getFriction(){
-        	switch(entityType){
-	        	case "WIZARD":
-	        	case "OPPONENT_WIZARD":
-	        	case "SNAFFLE":
-	        		return 0.75;
-	        	case "BLUDGER":
-	        		return 0.9;
-	        		
-	        	default:
-	        		System.err.println("Error: This doesn't make any sense");
-	        		return 1;
-        	}
-        }
-        
-        protected double getMass(){
-        	switch(entityType){
-        	case "WIZARD":
-        	case "OPPONENT_WIZARD":
-        		return 1;
-        	case "SNAFFLE":
-        		return 0.5;
-        	case "BLUDGER":
-        		return 8;
-        		
-        	default:
-        		System.err.println("Error: This doesn't make any sense");
-        		return 1;
-    	}
-        }
-        
-        
         public Entity futureTurn(){
         	Point futurePosition = futurePosition();
         	Vector futureSpeed = new Vector(vx, vy).multiply(getFriction());
@@ -1206,6 +1177,64 @@ class Player {
         	
         	return newSpeed;
         }
+        
+        public boolean willCollide(Entity other) {
+    		Vector toOther = new Vector(other.position).minus(new Vector(position));
+    		Vector relativeSpeed = new Vector(vx, vy).minus(new Vector(other.vx, other.vy));
+    		if (relativeSpeed.length2() <= 0)// No relative movement
+    			return false;
+    		if (toOther.dot(relativeSpeed) < 0)// Opposite directions
+    			return false;
+    		return Math.abs(relativeSpeed.norm().ortho().dot(toOther)) <= this.getRadius() + other.getRadius();
+    	}
+
+		private double getFriction(){
+			switch(entityType){
+		    	case "WIZARD":
+		    	case "OPPONENT_WIZARD":
+		    		return FRICTION_WIZARD;
+		    	case "SNAFFLE":
+		    		return FRICTION_SNAFFLE;
+		    	case "BLUDGER":
+		    		return FRICTION_BLUDGER;
+		    		
+		    	default:
+		    		System.err.println("Error: This doesn't make any sense");
+		    		return 1;
+			}
+		}
+
+		private double getMass(){
+			switch(entityType){
+		    	case "WIZARD":
+		    	case "OPPONENT_WIZARD":
+		    		return MASS_WIZARD;
+		    	case "SNAFFLE":
+		    		return MASS_SNAFFLE;
+		    	case "BLUDGER":
+		    		return MASS_BLUDGER;
+		    		
+		    	default:
+		    		System.err.println("Error: This doesn't make any sense");
+		    		return 1;
+			}
+		}
+
+		private double getRadius(){
+			switch(entityType){
+		    	case "WIZARD":
+		    	case "OPPONENT_WIZARD":
+		    		return RADIUS_WIZARD;
+		    	case "SNAFFLE":
+		    		return RADIUS_SNAFFLE;
+		    	case "BLUDGER":
+		    		return RADIUS_WIZARD;
+		    		
+		    	default:
+		    		System.err.println("Error: This doesn't make any sense");
+		    		return 1;
+			}
+		}
         
        
         
