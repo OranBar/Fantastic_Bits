@@ -709,65 +709,7 @@ class Player {
         }
         
         private String[] useAccioDefensive(String[] result, Entity[] myPlayers, Entity[] targets){
-        	//TODO: should I increase the mana needed for accio?
-            if(myMana < accioCost){
-                return result;
-            }
-            
-            
-            //When doing a defensive accio, I want the closest player to be the one accio-ing, since it will have more power. The other guy will wait for the pass
-            if(game.getDistance(myPlayers[1], targets[1]) < game.getDistance(myPlayers[0], targets[0])){
-            	Entity temp1 = myPlayers[0];
-            	Entity temp2 = targets[0];
-            	
-            	myPlayers[0] = myPlayers[1];
-            	myPlayers[1] = temp1;
-            	
-            	targets[0] = targets[1];
-            	targets[1] = temp2;
-            }
-            
-            for(int i=0; i<2; i++){
-            	Entity player = myPlayers[i];
-                if(flipendoDuration > 0 && targets[i].id ==flipendoedSnaffleId){
-                    continue;
-                }
-                if(usingAccio[i] > 0 ){
-                    continue;
-                }
-                if(targets[i].id == targets[1-i].id && usingAccio[1-i] > 0){
-                	continue;
-                }
-                if(player.state == 1){
-            		continue;
-            	}
-                //Don't accio things in front of you, only backwards
-                if(myTeam == 0 && player.x < targets[i].x ){
-                    continue;                    
-                }
-                if(myTeam == 1 && player.x > targets[i].x ){
-                    continue;
-                }
-                //If it's too close, then there is no point -- wrong comment
-                //If it's too far, it won't do anything
-                if(game.getDistance(player, targets[i]) < accioMinDistanceThld ){
-                    //continue; //TODO: uncomment this line
-                }
-                System.err.println(getAccioPower(myPlayers[i], targets[i]));
-                //If accio power is too weak, don't do it.
-                if(getAccioPower(myPlayers[i], targets[i]) < minAccioPower){
-                	continue; 
-                }
-                
-                
-                if(findNearest(targets[i].position, game.getAllSnatchers()).id != player.id){
-                    result[i] = "ACCIO "+targets[i].id;
-                    myMana -= accioCost;
-                    usingAccio[i] = 6;
-                    return result;
-                }
-            }
-            return result;
+        	return useAccio(result, myPlayers, targets);
         }
         
         private double getAccioPower(Entity player, Entity snaffle){
