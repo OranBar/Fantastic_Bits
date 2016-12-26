@@ -691,9 +691,6 @@ class Player {
                 if(flipendoDuration > 0 && targets[i].id == flipendoedSnaffleId){
                     continue;
                 }
-                if(targets[i].id == targets[1-i].id && usingAccio[1-i] > 0){
-                	continue;
-                }
             	//I have a snaffle. Let's throw it first, then accio later.
             	if(player.state == 1){
             		continue;
@@ -718,11 +715,6 @@ class Player {
                 if(getAccioPower(myPlayers[i], targets[i]) < minAccioPower){
                 	continue; 
                 }
-                //If the ball will be closer to me next turn, probably the other player passed it to me. No point in accio-ing.
-                if(game.getDistance(myPlayers[i], targets[i]) < game.getDistance(myPlayers[i].position, targets[i].futurePosition())){
-                    continue;
-                }
-
                 
                 if(findNearest(targets[i].position, game.getAllSnatchers()).id != player.id){
                     result[i] = "ACCIO "+targets[i].id;
