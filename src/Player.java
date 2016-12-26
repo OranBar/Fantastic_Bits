@@ -600,6 +600,23 @@ class Player {
         }
      	
         private boolean shouldPetrify(Entity e, int team){
+        	/*
+        	int turnWhenBallWillGoIn = 0;
+        	Point predictedSnafflePosition = e.position;
+        	while(turnWhenBallWillGoIn <=4){
+        		predictedSnafflePosition = e.futurePosition();
+        	}
+        	while(turnWhenBallWillGoIn <=4){
+        		predictedSnafflePosition = e.futurePosition();
+        	}
+        	
+        	
+        	if(turnWhenBallWillGoIn == 1|| turnWhenBallWillGoIn > 4){
+        		return false;
+        	} else {
+        		return true;
+        	}
+        	*/
         	
 			boolean xOk = false;
 			boolean yOk = (e.y + e.vy) < 3750 + 1900;
@@ -630,12 +647,7 @@ class Player {
             if(myMana < accioCost){
                 return result;
             }
-            
-            //If I do this, I won't be able to petrify his next flipendo
-            if(petrificusCost - (myMana - accioCost) > flipendoCost - opponentMana){
-            	return result;
-        	}
-            
+           
             for(int i=0; i<2; i++){
             	Entity player = myPlayers[i];
                 if(flipendoDuration > 0 && targets[i].id == flipendoedSnaffleId){
