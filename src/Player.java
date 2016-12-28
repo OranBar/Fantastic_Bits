@@ -216,34 +216,32 @@ class Player {
                 		 int x = targets[i].x;
                          int y = targets[i].y;
                          
+                         Vector bludgerToPlayer = new Vector(myPlayers[i].position).minus(new Vector(incomingBludger.position));
+                         Vector playerToTarget = new Vector(x,y).minus(new Vector(myPlayers[i].position));
+                         
+                         bludgerToPlayer = bludgerToPlayer.multiply(1/bludgerToPlayer.length());
+                         playerToTarget = playerToTarget.multiply(1/playerToTarget.length());
+                         
+                         Vector desiredVelocity = playerToTarget.minus(new Vector(myPlayers[i].futurePosition()));
+                         desiredVelocity = desiredVelocity.minus(bludgerToPlayer);
+                         
+                         x += desiredVelocity.x;
+                         y += desiredVelocity.y;
+                         
                 		 //You need to subtract velocities
+                         /*
                 		 Vector desiredVelocity = new Vector(x,y).minus(new Vector(myPlayers[i].futurePosition()));
                          Vector offset = desiredVelocity.minus(new Vector(myPlayers[i].vx, myPlayers[i].vx));
                          
                          x += offset.x;
                          y += offset.y;
+                         */
                         
                 		 result[i] = "MOVE "+x+" "+y+" 150";
                 	 }
                  }
             	
             } 
-            
-            /*
-            if(turns == 5){
-            	Entity bludger = game.getBludgers().get(0);
-           		Entity closestSnatcher = findNearest(bludger.position, game.getAllSnatchers());
-           		
-           		if(closestSnatcher.entityType.equals("WIZARD")){
-           			result[0] = "OBLIVIATE "+bludger.id;
-           		} else {
-           			result[0] = "OBLIVIATE "+game.getBludgers().get(1).id;
-           		}
-           		myMana -= obliviateCost;
-            }
-            */
-            
-           
             
             System.err.println("There are "+oneOfThoseMightHaveBeenFlipendoed.size()+" flipendo maybes");
             System.err.println("I have "+myMana+" mana, while petrificus costs "+petrificusCost);
