@@ -1370,11 +1370,7 @@ class Player {
         }
         
         public double getDistanceFromGoal(Point start, int team){
-            if(team==0){
-            	return getDistance(start, getGoal(team));
-            } else {
-            	return getDistance(start, getGoal(team));
-            }
+            return getDistance(start, getGoal(team));
         }
         
         public double getDistanceFuture(Entity e1, Entity e2){
@@ -1432,14 +1428,6 @@ class Player {
 
         public final int y;
 
-        private double getDoubleX(){
-        	return (double) x;
-        }
-        
-        private double getDoubleY(){
-        	return (double) x;
-        }
-        
         /**
          * Used in the equals method in order to consider two double are "equals"
          */
