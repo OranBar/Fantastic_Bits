@@ -393,19 +393,25 @@ class Player {
         	*/
         	
         	for(int i=0; i<2; i++){
-                for(Entity snaffle : game.getSnaffles()){
+        		Entity player = myPlayers[i];
+        		
+        		List<Entity> snafflesSortedByDistance = new LinkedList<Entity>(game.getSnaffles());
+        		
+        		snafflesSortedByDistance.sort( (s1, s2) ->  Double.compare(game.getDistance(s1, player), game.getDistance(s2, player)) );
+        		
+                for(Entity snaffle : snafflesSortedByDistance){
                     if(
-                    (isFlipendoLinedToGoal(myPlayers[i], snaffle, myTeam) 
+                    (isFlipendoLinedToGoal(player, snaffle, myTeam) 
                     //No allied player too close to the snaffle or closest player to snaffle is not me
-                    && (game.getDistance(snaffle, myPlayers[i]) > 1500 || findNearest(snaffle.position, game.getAllSnatchers()).entityType == "OPPONENT_WIZARD")  	  
+                    && (game.getDistance(snaffle, player) > 1500 || findNearest(snaffle.position, game.getAllSnatchers()).entityType == "OPPONENT_WIZARD")  	  
                     && game.getDistanceFromGoal(snaffle, opponentTeam) > flipendoMinDistanceFromGoalThld //TODO: take out?
                     && Math.abs(snaffle.vy) < 500	//If snaffle has too much vy, I might miss 
                     && game.getDistance(snaffle, findNearest(snaffle.position, game.getAllEntitiesExcept(snaffle))) > 650 //If something really close to the snaffle, abort
                     && targets[1-i].id != snaffle.id
-                    && game.getDistance(snaffle, myPlayers[i]) < flipendoMaxDistanceThld 
+                    && game.getDistance(snaffle, player) < flipendoMaxDistanceThld 
                     ) ) {
                         
-                        if(isThereObstacleBetweenSnaffleAndGoal(snaffle, myPlayers[i])){
+                        if(isThereObstacleBetweenSnaffleAndGoal(snaffle, player)){
                             result[i] = "FLIPENDO "+snaffle.id;
                             flipendoedSnaffleId = snaffle.id;
                             flipendoDuration = 3;
@@ -416,7 +422,7 @@ class Player {
                         
                     }
                     
-                    if(bounceGoalOpportunity(myPlayers[i], snaffle, myTeam) ){
+                    if(bounceGoalOpportunity(player, snaffle, myTeam) ){
                     	result[i] = "FLIPENDO "+snaffle.id+" Bounce Shot!!!" ;
                         flipendoedSnaffleId = snaffle.id;
                         flipendoDuration = 3;
