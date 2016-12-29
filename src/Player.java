@@ -202,6 +202,7 @@ class Player {
                 result = useFlipendoShot(result, myPlayers, targets);
             }
             
+            /*
             if(turns <= 6 && turns >= 2){
             	Entity incomingBludger = findNearest(game.getGoal(myTeam), game.getBludgers());
             	Entity bludgersTargetPlayer = findNearestFuture(incomingBludger, game.getAlliedSnatchers());
@@ -228,20 +229,15 @@ class Player {
                          x += desiredVelocity.x;
                          y += desiredVelocity.y;
                          
-                		 //You need to subtract velocities
-                         /*
-                		 Vector desiredVelocity = new Vector(x,y).minus(new Vector(myPlayers[i].futurePosition()));
-                         Vector offset = desiredVelocity.minus(new Vector(myPlayers[i].vx, myPlayers[i].vx));
-                         
-                         x += offset.x;
-                         y += offset.y;
-                         */
+                		 
                         
                 		 result[i] = "MOVE "+x+" "+y+" 150";
                 	 }
                  }
             	
             } 
+            */
+
             
             System.err.println("There are "+oneOfThoseMightHaveBeenFlipendoed.size()+" flipendo maybes");
             System.err.println("I have "+myMana+" mana, while petrificus costs "+petrificusCost);
