@@ -1,6 +1,9 @@
 import java.util.*;
 import java.util.function.BiFunction;
 import java.util.stream.Collectors;
+
+import com.sun.java.swing.plaf.windows.resources.windows;
+
 import java.awt.Point;
 
 /**
@@ -1681,4 +1684,101 @@ class Player {
 			return offset;
 		}
     }
+    
+    public static class InfluenceMap{
+    	
+    	protected float[][] influenceMap;
+    	protected int width, height;
+    	public DistanceFunc computeDistanceFunc;
+    	
+    	
+    	public InfluenceMap(int width, int height, DistanceFunc computeDistanceFunc){
+    		this.width = width;
+    		this.height 
+    		this.influenceMap = new float[width][];
+    		for(int i=0; i<width; i++){
+    			this.influenceMap[i] = new float[height];
+    		}
+    		this.computeDistanceFunc = computeDistanceFunc;
+    	}
+    	
+    	public float get(int x, int y){
+    		return influenceMap[x][y];
+    	}
+    	
+    	public int[][] getNeighbours(int x, int y){
+    		int noOfNeighbours = 8;
+    		if(x == 0 || x == width-1){
+    			noOfNeighbours -= 3;
+    		}
+    		if(y == 0 || y == width-1){
+    			if(noOfNeighbours < 8){
+    				noOfNeighbours -= 2;
+    			}
+    			noOfNeighbours -= 3;
+    		}
+    		
+    		int currNeighbours = 0;
+    		int[][] neighbours = new int[noOfNeighbours][];
+    		for(int i=-1; i<=1; i++){
+    			for(int j=-1; j<=1; j++){
+    				if(i==0 && j==0){ continue; }
+    				
+	    			int xNeighbour = x-i, yNeighbour= y-j;
+	    			if(xNeighbour >= 0 && xNeighbour <= width-1 
+	    			&& yNeighbour >= 0 && yNeighbour <= height-1){
+	    				neighbours[currNeighbours] = new int[]{xNeighbour, yNeighbour};
+	    				currNeighbours++;
+	    			}
+    			}
+    		}
+    		return neighbours;
+    	}
+    	
+    	public void applyInfluence(int x, int y, float amount, int fullAmountDistance, int reducedAmountDistance, float distanceDecay){
+    		applyInfluenceRecursive(x, y, amount, fullAmountDistance, reducedAmountDistance, distanceDecay);
+    	}
+    	
+    	public void applyInfluenceRecursive(int x, int y, float amount, int fullAmountDistance, int reducedAmountDistance, float distanceDecay){
+    		if(fullAmountDistance < 0 && reducedAmountDistance < 0) { System.err.println("Error!"); }
+    		
+    		if(fullAmountDistance > 0){
+    			influenceMap[x][y] = amount;
+    			for(int[] neighbour : getNeighbours(x, y)){
+    				applyInfluenceRecursive(neighbour[0], neighbour[1], amount, fullAmountDistance-1, reducedAmountDistance, distanceDecay);
+    			}
+    		}
+    		
+    		if(reducedAmountDistance > 0){
+    			influenceMap[x][y] = amount;
+    			for(int[] neighbour : getNeighbours(x, y)){
+    				applyInfluenceRecursive(neighbour[0], neighbour[1], amount * distanceDecay, fullAmountDistance, reducedAmountDistance-1, distanceDecay);
+    			}
+    		}
+    	}
+    	
+    	public void applyInfluence(float amount, int fullAmountDistance, int reducedAmountDistance, float distanceDecay, int... points){
+    		if(points.length%2 == 1){
+    			System.err.println("invalid number of points args");
+    		}
+    		
+    		int noOfPoints = points.length/2;
+    		
+    		amount /= noOfPoints;
+    		
+    		for(int i=0; i<noOfPoints; i++){
+    			int pointX = points[i];
+    			int pointY = points[i+1];
+    			
+    			applyInfluence(pointX, pointY, amount, fullAmountDistance, reducedAmountDistance, distanceDecay);
+    		}
+    		
+    	}
+    }
+    
+    public static interface DistanceFunc{
+    	
+    	public float apply(int x1, int y1, int x2, int y2);
+    }
+  
 }
