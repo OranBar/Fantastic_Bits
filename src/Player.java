@@ -183,6 +183,9 @@ class Player {
                     x = myPlayers[i].x + (int)offset.x;
                     y = myPlayers[i].y + (int)offset.y;
                     
+                    Vector throwTarget = chooseThrowTarget(myPlayers[i]);
+                    System.err.println("Throw target is "+throwTarget);
+                    
                     result[i] = "THROW "+x+" "+y+" 500";
                 }
             }
@@ -258,6 +261,73 @@ class Player {
             
             return result;
              
+        }
+        
+        private Vector chooseThrowTarget(Entity player){
+        	float goalInfl = 500f;
+        	float goalDecay = 0.97f;
+        	
+        	float opponentInfl = 250f;
+        	float opponentDecay = 0.825f;
+        	
+        	InfluenceMap iMap = new InfluenceMap(32, 14);
+        	int inflMapSquares = 16000/iMap.width;
+        	if(inflMapSquares != 7000/iMap.height){
+        		System.err.println("Error with dimensions of influence map. The resulting separation of the playing field"
+        				+ "is assimmetric between x and y");
+        	}
+        	
+        	System.err.println("Goal top opp");
+        	Point influencePoint = game.getGoalTop(opponentTeam);
+        	float x = influencePoint.x - 0.001f;
+        	float y = influencePoint.y - 0.001f;
+        	iMap.applyInfluence(x/inflMapSquares, y/inflMapSquares, goalInfl, 1, 350, goalDecay);
+
+        	System.err.println("Goal bottom opp");
+            influencePoint = game.getGoalBottom(opponentTeam);
+            x = influencePoint.x - 0.001f;
+        	y = influencePoint.y - 0.001f;
+            iMap.applyInfluence(x/inflMapSquares, y/inflMapSquares, goalInfl, 1, 1000, goalDecay);
+
+            System.err.println("Goal top me");
+            influencePoint = game.getGoalTop(myTeam);
+            x = influencePoint.x - 0.001f;
+        	y = influencePoint.y - 0.001f;
+            iMap.applyInfluence(x/inflMapSquares, y/inflMapSquares, -goalInfl, 1, 1000, goalDecay);
+
+            System.err.println("Goal bottom me");
+            influencePoint = game.getGoalBottom(myTeam);
+            x = influencePoint.x - 0.001f;
+        	y = influencePoint.y - 0.001f;
+            iMap.applyInfluence(x/inflMapSquares, y/inflMapSquares, -goalInfl, 1, 1000, goalDecay);
+
+            for(Entity opponent : game.getOpponentSnatchers()){
+            	System.err.println("Snatcher "+opponent.id);
+            	influencePoint = opponent.position;
+            	x = influencePoint.x - 0.001f;
+            	y = influencePoint.y - 0.001f;
+            	iMap.applyInfluence(x/inflMapSquares, y/inflMapSquares, opponentInfl, 1, 1000, opponentDecay);
+            }
+        	
+        	System.err.println("----------iMap Dump-----------");
+        	iMap.dumpHistory();
+        	System.err.println("----------------------------");
+        	//Influence map is ready. Let's check for values around my player to see where I can throw, and make a decision.
+        	
+        	//This is the throw distance in the real map
+        	float throwDistance = 500;	
+        	//The influence map is made of a 2d grid. This var is the number of squares that I can do with a throw
+        	int inflMapThrowDistance = 500 / inflMapSquares;	
+        	ArrayList<Integer[]> throwCandidates = iMap.getInRange(player.x / inflMapSquares, player.y / inflMapSquares, inflMapThrowDistance);
+        	
+        	TreeMap<Float, Integer[]> sortedThrowCandidates = 
+        			rankAndSort(throwCandidates, (game, candidate) -> iMap.get(candidate[0], candidate[1]));
+        	
+        	Integer[] bestCandidate = sortedThrowCandidates.firstEntry().getValue();
+        	Vector result = new Vector(bestCandidate[0], bestCandidate[1]);
+        	System.err.println("Best candidate is "+result);
+        	
+        	return result;
         }
         
         private void detectOpponentSpellUse(){
@@ -1055,10 +1125,18 @@ class Player {
             return Math.sqrt(sp * (sp - v1v2)*(sp - v2v3)*(sp - v3v1));
         }
         
-        private <E> HashMap<E, Integer> rank(List<E> entries, BiFunction<Game,E,Integer> rankingFunction){
-        	HashMap<E, Integer> result = new HashMap<E, Integer>();
+        private <E> HashMap<E, Float> rank(List<E> entries, BiFunction<Game,E,Float> rankingFunction){
+        	HashMap<E, Float> result = new HashMap<E, Float>();
         	for(E entry : entries){
         		result.put(entry, rankingFunction.apply(game, entry));
+        	}
+        	return result;
+        }
+         
+        private <E> TreeMap<Float, E> rankAndSort(List<E> entries, BiFunction<Game,E,Float> rankingFunction){
+        	TreeMap<Float, E> result = new TreeMap<Float, E>();
+        	for(E entry : entries){
+        		result.put(rankingFunction.apply(game, entry), entry);
         	}
         	return result;
         }
@@ -1682,100 +1760,271 @@ class Player {
 		}
     }
     
-    public static class InfluenceMap{
-    	
-    	protected float[][] influenceMap;
-    	protected int width, height;
-    	public DistanceFunc computeDistanceFunc;
-    	
-    	
-    	public InfluenceMap(int width, int height, DistanceFunc computeDistanceFunc){
-    		this.width = width;
-    		this.height = height;
-    		this.influenceMap = new float[width][];
-    		for(int i=0; i<width; i++){
-    			this.influenceMap[i] = new float[height];
-    		}
-    		this.computeDistanceFunc = computeDistanceFunc;
-    	}
-    	
-    	public float get(int x, int y){
-    		return influenceMap[x][y];
-    	}
-    	
-    	public int[][] getNeighbours(int x, int y){
-    		int noOfNeighbours = 8;
-    		if(x == 0 || x == width-1){
-    			noOfNeighbours -= 3;
-    		}
-    		if(y == 0 || y == width-1){
-    			if(noOfNeighbours < 8){
-    				noOfNeighbours -= 2;
-    			}
-    			noOfNeighbours -= 3;
-    		}
-    		
-    		int currNeighbours = 0;
-    		int[][] neighbours = new int[noOfNeighbours][];
-    		for(int i=-1; i<=1; i++){
-    			for(int j=-1; j<=1; j++){
-    				if(i==0 && j==0){ continue; }
-    				
-	    			int xNeighbour = x-i, yNeighbour= y-j;
+
+	public static class InfluenceMap{
+		
+		protected float[][] influenceMap;
+		protected int width, height;
+		private Stack<InfluenceMapCommand> history = new Stack<InfluenceMapCommand>(); 
+		
+		
+		public InfluenceMap(int width, int height){
+			this.width = width;
+			this.height = height;
+			this.influenceMap = new float[width][];
+			for(int i=0; i<width; i++){
+				this.influenceMap[i] = new float[height];
+			}
+		}
+		
+		public void applyInfluence(float x, float y, float amount, float fullAmountDistance, float reducedAmountDistance,
+				float decay) {
+			applyInfluence((int)x , (int)y, amount, (int)fullAmountDistance, (int)reducedAmountDistance, decay);
+			
+		}
+
+		public float get(int x, int y){
+			return influenceMap[x][y];
+		}
+		
+		public ArrayList<Integer[]> getInRange(int x, int y, int radius){
+			ArrayList<Integer[]> inRange = new ArrayList<Integer[]>();
+			
+			//First all of the elements lined up to the center
+			if(isOnBoard(x+radius, y)){
+				inRange.add(new Integer[]{x+radius, y});
+			}
+			if(isOnBoard(x-radius, y)){
+				inRange.add(new Integer[]{x-radius, y});			
+			}
+			if(isOnBoard(x, y+radius)){
+				inRange.add(new Integer[]{x, y+radius});
+			}
+			if(isOnBoard(x, y-radius)){
+				inRange.add(new Integer[]{x, y-radius});
+			}
+			
+			//Then all of the elements that diagonally connecy the first 4 elements.
+			for(int i=radius-1; i>0; i--){
+				int xOff = i, yOff = radius-i;
+				
+				if(isOnBoard(x+xOff, y+yOff)){
+					inRange.add(new Integer[]{x+xOff, y+yOff});
+				}
+				if(isOnBoard(x-xOff, y+yOff)){
+					inRange.add(new Integer[]{x-xOff, y+yOff});			
+				}
+				if(isOnBoard(x+xOff, y-yOff)){
+					inRange.add(new Integer[]{x+xOff, y-yOff});
+				}
+				if(isOnBoard(x-xOff, y-yOff)){
+					inRange.add(new Integer[]{x-xOff, y-yOff});
+				}
+			}
+		
+	//		System.out.println("In range of "+x+" "+y);
+	//		inRange.stream().forEach( n -> System.out.println(n[0]+" "+n[1]));
+			return inRange;
+		}
+		
+		private boolean isOnBoard(int x, int y){
+			try{
+				float temp = influenceMap[x][y];
+				return true;
+			} catch(ArrayIndexOutOfBoundsException e){
+				return false;
+			}
+		}
+		
+		public int[][] getAllNeighbours(int x, int y){
+			int noOfNeighbours = 8;
+			if(x == 0 || x == width-1){
+				noOfNeighbours -= 3;
+			}
+			if(y == 0 || y == width-1){
+				if(noOfNeighbours < 8){
+					noOfNeighbours -= 2;
+				} else {
+					noOfNeighbours -= 3;
+				}
+			}
+			
+			int currNeighbours = 0;
+			int[][] neighbours = new int[noOfNeighbours][];
+			for(int i=-1; i<=1; i=i+2){
+				for(int j=-1; j<=1; j=j+2){
+					
+					int xNeighbour = x+i, yNeighbour= y+j;
 	    			if(xNeighbour >= 0 && xNeighbour <= width-1 
 	    			&& yNeighbour >= 0 && yNeighbour <= height-1){
 	    				neighbours[currNeighbours] = new int[]{xNeighbour, yNeighbour};
 	    				currNeighbours++;
 	    			}
-    			}
-    		}
-    		return neighbours;
-    	}
-    	
-    	public void applyInfluence(int x, int y, float amount, int fullAmountDistance, int reducedAmountDistance, float distanceDecay){
-    		applyInfluenceRecursive(x, y, amount, fullAmountDistance, reducedAmountDistance, distanceDecay);
-    	}
-    	
-    	public void applyInfluenceRecursive(int x, int y, float amount, int fullAmountDistance, int reducedAmountDistance, float distanceDecay){
-    		if(fullAmountDistance < 0 && reducedAmountDistance < 0) { System.err.println("Error!"); }
-    		
-    		if(fullAmountDistance > 0){
-    			influenceMap[x][y] = amount;
-    			for(int[] neighbour : getNeighbours(x, y)){
-    				applyInfluenceRecursive(neighbour[0], neighbour[1], amount, fullAmountDistance-1, reducedAmountDistance, distanceDecay);
-    			}
-    		}
-    		
-    		if(reducedAmountDistance > 0){
-    			influenceMap[x][y] = amount;
-    			for(int[] neighbour : getNeighbours(x, y)){
-    				applyInfluenceRecursive(neighbour[0], neighbour[1], amount * distanceDecay, fullAmountDistance, reducedAmountDistance-1, distanceDecay);
-    			}
-    		}
-    	}
-    	
-    	public void applyInfluence(float amount, int fullAmountDistance, int reducedAmountDistance, float distanceDecay, int... points){
-    		if(points.length%2 == 1){
-    			System.err.println("invalid number of points args");
-    		}
-    		
-    		int noOfPoints = points.length/2;
-    		
-    		amount /= noOfPoints;
-    		
-    		for(int i=0; i<noOfPoints; i++){
-    			int pointX = points[i];
-    			int pointY = points[i+1];
-    			
-    			applyInfluence(pointX, pointY, amount, fullAmountDistance, reducedAmountDistance, distanceDecay);
-    		}
-    		
-    	}
-    }
-    
-    public static interface DistanceFunc{
-    	
-    	public float apply(int x1, int y1, int x2, int y2);
-    }
-  
+				}
+			}
+			for(int i=-1; i<=1; i++){
+				for(int j=-1; j<=1; j++){
+					if(Math.abs(i)+Math.abs(j) == 1){
+						int xNeighbour = x+i, yNeighbour= y+j;
+						if(xNeighbour >= 0 && xNeighbour <= width-1 
+								&& yNeighbour >= 0 && yNeighbour <= height-1){
+							neighbours[currNeighbours] = new int[]{xNeighbour, yNeighbour};
+							currNeighbours++;
+						}
+					}
+				}
+			}
+			return neighbours;
+		}
+		
+		public int[][] getNeighbours(int x, int y){
+			int noOfNeighbours = 4;
+			if(x == 0 || x == width-1){
+				noOfNeighbours -= 1;
+			}
+			if(y == 0 || y == width-1){
+				noOfNeighbours -= 1;
+			}
+			
+			int currNeighbours = 0;
+			int[][] neighbours = new int[noOfNeighbours][];
+			
+			for(int i=-1; i<=1; i++){
+				for(int j=-1; j<=1; j++){
+					if(Math.abs(i)+Math.abs(j) == 1){
+						int xNeighbour = x+i, yNeighbour= y+j;
+						if(xNeighbour >= 0 && xNeighbour <= width-1 
+								&& yNeighbour >= 0 && yNeighbour <= height-1){
+							neighbours[currNeighbours] = new int[]{xNeighbour, yNeighbour};
+							currNeighbours++;
+						}
+					}
+				}
+			}
+			
+			return neighbours;
+		}
+		
+		public void applyInfluence(int x, int y, float amount, int fullAmountDistance, int reducedAmountDistance, float distanceDecay){
+			history.push(new InfluenceMapCommand(x, y, amount, fullAmountDistance, reducedAmountDistance, distanceDecay));
+			//System.err.println(history.peek().toString());
+			applyInfluenceIterative(x, y, amount, fullAmountDistance, reducedAmountDistance, distanceDecay);
+		}
+		
+		private void applyInfluenceIterative(int x, int y, float amount, int fullAmountDistance, int reducedAmountDistance, float distanceDecay){
+        	System.err.println("influence map size is "+influenceMap.length+" "+influenceMap[0].length);
+
+			influenceMap[x][y] += amount;
+			
+			int i = 0;
+			for(int r=0; r < fullAmountDistance; r++){
+				boolean flag = true;
+				for(Integer[] tile : getInRange(x, y, r+1)){
+					int tileX = tile[0], tileY = tile[1];
+					influenceMap[tileX][tileY] += amount;
+				}
+				System.err.println("FullDist iter "+i);
+				i++;
+				if(flag){
+					break;
+				}
+			}
+			i=0;
+			for(int r = 0; r < reducedAmountDistance; r++){
+				boolean flag = true;
+				for(Integer[] tile : getInRange(x, y, r+1+fullAmountDistance)){
+					flag = false;
+					int tileX = tile[0], tileY = tile[1];
+					influenceMap[tileX][tileY] += (float) (amount * distanceDecay);
+					distanceDecay = distanceDecay * distanceDecay;
+				}
+				System.err.println("reducedAmountDistance iter "+i);
+				i++;
+				if(flag){
+					break;
+				}
+			}
+		}
+		
+		public void applyInfluence(float amount, int fullAmountDistance, int reducedAmountDistance, float distanceDecay, LinkedList<Integer[]> visited, int... points){
+			if(points.length%2 == 1){
+				System.err.println("invalid number of points args");
+			}
+			
+			int noOfPoints = points.length/2;
+			
+			amount /= noOfPoints;
+			
+			for(int i=0; i<noOfPoints; i++){
+				int pointX = points[i];
+				int pointY = points[i+1];
+				
+				applyInfluence(pointX, pointY, amount, fullAmountDistance, reducedAmountDistance, distanceDecay);
+			}
+		}
+		
+		public String getHistory(){
+			String result = "";
+			while(history.isEmpty() == false){
+				result += history.pop()+"\n";
+			}
+			return result;
+			
+		}
+		
+		public void dumpHistory(){
+			while(history.isEmpty() == false){
+				System.err.println(history.pop());
+			}
+		}
+	}
+
+	public static class InfluenceMapCommand {
+		
+		public int x;
+		public int y;
+		public float amount;
+		public int fullAmountDistance;
+		public int reducedAmountDistance;
+		public float distanceDecay;
+		
+		
+		public InfluenceMapCommand(int x, int y, float amount, int fullAmountDistance, int reducedAmountDistance,
+				float distanceDecay) {
+			super();
+			this.x = x;
+			this.y = y;
+			this.amount = amount;
+			this.fullAmountDistance = fullAmountDistance;
+			this.reducedAmountDistance = reducedAmountDistance;
+			this.distanceDecay = distanceDecay;
+		}
+		
+		public InfluenceMapCommand(String fromString){
+			String[] inputs = fromString.split(" ");
+			
+			x = Integer.parseInt(inputs[0]);
+			y = Integer.parseInt(inputs[1]);
+			amount = Float.parseFloat(inputs[2]);
+			fullAmountDistance = Integer.parseInt(inputs[3]);
+			reducedAmountDistance = Integer.parseInt(inputs[4]);
+			distanceDecay = Float.parseFloat(inputs[5]);
+		}
+	
+		public void applyInfluence(InfluenceMap imap){
+			imap.applyInfluence(x, y, amount, fullAmountDistance, reducedAmountDistance, distanceDecay);
+		}
+		
+		public void undo(InfluenceMap imap){
+			imap.applyInfluence(x, y, -amount, fullAmountDistance, reducedAmountDistance, distanceDecay);
+		}
+		
+		@Override
+		public String toString(){
+			return String.format("%d %d %f %d %d %f", x, y, amount, fullAmountDistance, reducedAmountDistance, distanceDecay);
+		}
+	
+	}
+
+
 }
