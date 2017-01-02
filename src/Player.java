@@ -1,5 +1,6 @@
 import java.util.*;
 import java.util.function.BiFunction;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.awt.Point;
 
@@ -176,12 +177,15 @@ class Player {
                     //System.err.println("snaffle velocity x "+targets[i].vx+"- y "+targets[i].vy);
                     
                     //I want my desired velocity to be in the direction of this target.
-                    Vector desiredVelocity = new Vector(x,y).minus(new Vector(myPlayers[i].futurePosition()));
-                    Vector offset = desiredVelocity.minus(new Vector(myPlayers[i].vx * 0.75, myPlayers[i].vy * 0.75));
+                    VectorD desiredVelocity = new VectorD(x,y).minus(new VectorD(myPlayers[i].futurePosition()));
+                    VectorD offset = desiredVelocity.minus(new VectorD(myPlayers[i].vx * 0.75, myPlayers[i].vy * 0.75));
                     
                     
                     x = myPlayers[i].x + (int)offset.x;
                     y = myPlayers[i].y + (int)offset.y;
+                    
+                    VectorD aiThrowTarget = chooseThrowTarget(myPlayers[i]);
+                    System.err.println("AI: I think P"+myPlayers[i].id+" should throw to "+aiThrowTarget);
                     
                     result[i] = "THROW "+x+" "+y+" 500";
                 }
@@ -329,6 +333,7 @@ class Player {
     				//He is probably looking for a bounce shot... For now I'll ignore this case, since I have more time to stop it,
     				//so hopefully, the petrificus code will do that.
     			}
+    			
     			if(possibleFlipendoTargets.size() > 1){
     				//This is a really far ball. Let's assume he didn't hit that one
     				List<Entity> snafflesToRemove = new LinkedList<Entity>();
@@ -761,14 +766,14 @@ class Player {
                 for(int i=0; i<2;i++){
                     if(distanceFromSnaffle[i] > distanceFromSnaffle[1-i] ){
                     	//Player i should be the attacker, since it's further away from the snaffle.
-                    	Vector defenderPos = new Vector(myPlayers[1-i].position);
-                    	Vector goalPos  = new Vector(game.getGoal(opponentTeam));
+                    	VectorD defenderPos = new VectorD(myPlayers[1-i].position);
+                    	VectorD goalPos  = new VectorD(game.getGoal(opponentTeam));
                     	
-                    	Vector defenderToGoal = goalPos.minus(defenderPos);
+                    	VectorD defenderToGoal = goalPos.minus(defenderPos);
                     	defenderToGoal = defenderToGoal.norm();
                     	
                     	
-                    	Vector targetPosition = new Vector(myPlayers[1-i].position).add( (defenderToGoal.multiply(2000) ));
+                    	VectorD targetPosition = new VectorD(myPlayers[1-i].position).add( (defenderToGoal.multiply(2000) ));
                     	
                     	Entity newTargetPosition = new Entity(snaffles.get(0).id, "PuntoNelVuoto");
                         newTargetPosition.updateInfo( (int)targetPosition.x, (int)targetPosition.y, 0, 0, 0);
@@ -848,7 +853,7 @@ class Player {
         	if(myTeam==1 && player.futurePosition().x < snaffle.x ){
         		return false;
         	}
-        	Vector snaffleVelocity = new Vector(snaffle.vx, snaffle.vy);
+        	VectorD snaffleVelocity = new VectorD(snaffle.vx, snaffle.vy);
         	//For the love of god don't hit snaffles that are moving fast
         	if(snaffleVelocity.length() > 400){
         		return false;
@@ -875,14 +880,14 @@ class Player {
         	}
         	
         	
-        	Vector playerPos = new Vector(player.futurePosition());
-        	Vector snafflePos = new Vector(snaffle.futurePosition());
+        	VectorD playerPos = new VectorD(player.futurePosition());
+        	VectorD snafflePos = new VectorD(snaffle.futurePosition());
 
         	
         	Line line = new Line(playerPos, snafflePos);
         	
-        	Vector topWallHitPoint = new Vector(line.GetX(0f), 0f);
-        	Vector bottomWallHitPoint = new Vector(line.GetX(7000f), 7000f);
+        	VectorD topWallHitPoint = new VectorD(line.GetX(0f), 0f);
+        	VectorD bottomWallHitPoint = new VectorD(line.GetX(7000f), 7000f);
 
         	if(topWallHitPoint.x < 0 || topWallHitPoint.x > 16000){
         		return false;
@@ -1063,6 +1068,122 @@ class Player {
         	return result;
         }
         
+        public VectorD chooseThrowTarget(Entity player){
+        	int throwAngles = 4; 
+        	//Vector[] possiblePoints = new Vector[throwAngles];
+
+        	float angleIncrement = 360/throwAngles;
+
+        	float maxScore = -1;
+        	float bestAngle = -1;
+        	VectorD bestThrowTarget = new VectorD(-1,-1);
+
+        	for(float angle=0; angle<360; angle+=angleIncrement){
+        		double angleRadians = (double) Math.toRadians(angle);
+        		VectorD currThrowTarget = new VectorD(player.x, player.y)
+        				.add(new VectorD(Math.cos(angleRadians), Math.sin(angleRadians)).multiply(150));
+
+        		VectorD throwDirection = new VectorD(Math.cos(angleRadians), Math.sin(angleRadians)).multiply(150);
+        		System.err.println("Angle is "+angle+". Throw direction is "+throwDirection);
+        		
+        		float score = getThrowScore(currThrowTarget);
+        		System.err.println("AI: Hmmm. Throwing to "+currThrowTarget+". I'd score it as "+score);
+        		if(score > maxScore){
+        			score = maxScore;
+        			bestAngle = angle;
+        			bestThrowTarget = currThrowTarget;
+        		}
+        	}
+
+        	return bestThrowTarget;
+        }
+
+        private float getThrowScore(VectorD throwTarget){
+        	float totalThrowScore = 0f;
+        	
+        	float goalInfluenceDistance = 16000/4*3;
+        	float goalScore = 500;
+        	float goalDecay = 0.98f;
+        	Function<Float, Float> normalizeGoalDistance = d -> normalizeRange(d, 0, 17500, 0, 35);
+        	
+        	float snaffleInfluence = 0;
+        	float snaffleReducedInfluenceRange =0;
+        	float snaffleFullInfluenceRange = 0;
+        	float snaffleDecayPower = 0f;
+        	
+        	float opponentDecayPower = 0f;
+        	float opponentInfluence = 0f;
+        	float opponentReducedInfluenceRange = 0f;
+        	float opponentFullInfluenceRange = 0f;
+        	Function<Float, Float> normalizeOpponentDistance = d -> normalizeRange(d, 0, 17500, 0, 35);
+        	
+        	
+        	//I don't think these values really matter. it's just a matter of making the targets closer to the opponent's goal better.
+        	//score += goalInfluence * Math.pow(goalDistanceDecay, goalDecay);
+        	if( game.getDistanceFromGoal(new Point((int)throwTarget.x, (int)throwTarget.y), opponentTeam) < goalInfluenceDistance ){
+        		//The second parameter of pow is toooo big. It can be 7000!! Maybe I should divide all distances I get by 500
+        		float goalDecayPower = (float) game.getDistanceFromGoal(new Point((int)throwTarget.x, (int)throwTarget.y), opponentTeam);
+        		System.err.println("goalDecayPower "+goalDecayPower);
+        		
+				goalDecayPower = normalizeGoalDistance.apply(goalDecayPower);
+
+				System.err.println("Norm goalDecayPower "+goalDecayPower);
+        		totalThrowScore += goalScore * Math.pow(goalDecay, goalDecayPower);
+        		
+        		System.err.println("Math.pow(goalDecay, goalDecayPower) "+Math.pow(goalDecay, goalDecayPower));
+        	}
+        	if( game.getDistanceFromGoal(new Point((int)throwTarget.x, (int)throwTarget.y), myTeam) < goalInfluenceDistance ){
+        		totalThrowScore += (-goalScore) * Math.pow(goalDecay, game.getDistanceFromGoal(new Point((int)throwTarget.x, (int)throwTarget.y), myTeam));
+        	}
+        	//This is for rewarding throwing the ball towards other balls. 
+        	//It is controlled by 
+        	//snaffleInfluence (0<x<boh)
+        	//snaffleDistanceDecay (0<x<1)
+        	//snaffleFullInfluenceRange - Area around the snaffle that will get full influence bonus
+        	//snaffleReducedInfluenceRange - Area around the snaffle that, after the FullInfluenceRange,
+        	// will start dropping the influence value using snaffleDistanceDecay at every step
+        	for(Entity snaffle : game.getSnaffles()){
+        		int distanceToSnaffle = (int) game.getDistance(new Point((int)throwTarget.x, (int)throwTarget.y), snaffle.position);
+        		if(distanceToSnaffle <= 550){ 
+        			//This is the snaffle I'm holding! Return.
+        			continue;
+        		}
+        		float snaffleDecay = distanceToSnaffle - snaffleFullInfluenceRange;
+        		if(snaffleDecay<0 && snaffleDecay <= snaffleFullInfluenceRange + snaffleReducedInfluenceRange){
+        			snaffleDecay = 0;
+        			totalThrowScore += snaffleInfluence * Math.pow(snaffleDecay, snaffleDecayPower);
+        		}
+        	}
+
+        	//Similar to above
+        	for(Entity opponent : game.getOpponentSnatchers()){
+        		int distanceToOpponent = (int) game.getDistance(new Point((int)throwTarget.x, (int)throwTarget.y), opponent.position);
+        		float decayPower = distanceToOpponent - opponentFullInfluenceRange;
+        		System.err.println("decayPower "+ decayPower);
+        		if(decayPower<0 && decayPower <= opponentFullInfluenceRange + opponentReducedInfluenceRange){
+        			decayPower = 0;
+        			totalThrowScore += opponentInfluence * Math.pow(decayPower, opponentDecayPower);
+        		}
+        	}
+
+        	return totalThrowScore;
+        }
+        
+        public int normalize(int value, int min, int max){
+        	return (value-min)/(max-min);
+        }
+        
+        public float normalize(float value, float min, float max){
+        	return (value-min)/(max-min);
+        }
+        
+        public int normalizeRange(int value, int min, int max, int newMin, int newMax){
+        	return normalize(value, min, max) * (newMax - newMin) + newMin;
+        }
+        
+        public float normalizeRange(float value, float min, float max, float newMin, float newMax){
+        	return normalize(value, min, max) * (newMax - newMin) + newMin;
+        }
     }
     
     
@@ -1357,7 +1478,7 @@ class Player {
             return getDistance(e1.position, e2.position);
         }
         
-        public double getDistance(Vector start, Vector end){
+        public double getDistance(VectorD start, VectorD end){
             return Math.sqrt(Math.pow(start.x-end.x,2)+Math.pow(start.y-end.y,2));
         }
         
@@ -1371,6 +1492,10 @@ class Player {
         
         public double getDistanceFromGoal(Point start, int team){
             return getDistance(start, getGoal(team));
+        }
+        
+        public double getDistanceFromGoal(Vector start, int team){
+            return getDistance(new Point(start.x, start.y), getGoal(team));
         }
         
         public double getDistanceFuture(Entity e1, Entity e2){
@@ -1419,6 +1544,269 @@ class Player {
      * It contains final fields and will return a new instance on each performed operations
      *
      */
+    public static class VectorD {
+        private static String doubleToString(double d) {
+            return String.format("%.3f", d);
+        }
+
+        public final double x;
+
+        public final double y;
+
+        /**
+         * Used in the equals method in order to consider two double are "equals"
+         */
+        public static double COMPARISON_TOLERANCE = 0.0000001;
+
+        /**
+         * Constructor from a given point
+         * @param point
+         * 	The point from which we will take the x and y
+         */
+        public VectorD(Point coord) {
+            this(coord.x, coord.y);
+        }
+
+        /**
+         * Constructor from two double
+         * @param x
+         * 	the x value of the vector
+         * @param y
+         *  the y value of the vector
+         */
+        public VectorD(double x, double y) {
+            this.x = (int) x;
+            this.y = (int) y;
+        }
+        
+        public VectorD(int x, int y) {
+            this.x = x;
+            this.y = y;
+        }
+
+        
+        /**
+         * Constructor from another vector
+         * @param other
+         * 		use the x and y values of the given vector
+         */
+        public VectorD(VectorD other) {
+            this(other.x, other.y);
+        }
+
+        
+        /**
+         * Add to this vector the given vector
+         * @param other
+         * @return
+         * 	a new instance of vector sum of this and the given vector
+         */
+        public VectorD add(VectorD other) {
+            return new VectorD(x + other.x, y + other.y);
+        }
+
+        /**
+         * Negates this vector. The vector has the same magnitude as before, but its direction is now opposite.
+         * 
+         * @return a new vector instance with both x and y negated
+         */
+        public VectorD negate() {
+            return new VectorD(-x, -y);
+        }
+
+        /**
+         * Return a new instance of vector rotated from the given number of degrees.
+         * @param degree
+         * 		the number of degrees to rotate
+         * @return
+         * 		a new instance rotated
+         */
+        public VectorD rotateInDegree(double degree){
+        	return rotateInRadian(Math.toRadians(degree));
+        }
+
+        /**
+         * Return a new instance of vector rotated from the given number of radians.
+         * @param radians
+         * the number of radians to rotate
+         * @return
+         * a new instance rotated
+         */
+        public VectorD rotateInRadian(double radians) {
+            final double length = length();
+            double angle = angleInRadian();
+            angle += radians;
+            final VectorD result = new VectorD(Math.cos(angle), Math.sin(angle));
+            return result.multiply(length);
+        }
+
+        /**
+         * @return
+         * 	the angle between this vector and the vector (1,0) in degrees
+         */
+        public double angleInDegree() {
+            return Math.toDegrees(angleInRadian());
+        }
+
+    	/**
+    	 * @return
+         * 	the angle between this vector and the vector (1,0) in radians
+    	 */
+    	private double angleInRadian() {
+    		return Math.atan2(y, x);
+    	}
+
+        /**
+         * dot product operator
+         * two vectors that are perpendicular have a dot product of 0
+         * @param other
+         * 		the other vector of the dot product
+         * @return
+         * 		the dot product
+         */
+        public double dot(VectorD other) {
+            return x * other.x + y * other.y;
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (this == obj) {
+                return true;
+            }
+            if (obj == null) {
+                return false;
+            }
+            if (getClass() != obj.getClass()) {
+                return false;
+            }
+            final VectorD other = (VectorD) obj;
+            if (Math.abs(x - other.x) > COMPARISON_TOLERANCE) {
+                return false;
+            }
+            if (Math.abs(y - other.y) > COMPARISON_TOLERANCE) {
+                return false;
+            }
+            return true;
+        }
+
+        @Override
+        public int hashCode() {
+            final int prime = 31;
+            int result = 1;
+            long temp;
+            temp = Double.doubleToLongBits(x);
+            result = prime * result + (int) (temp ^ (temp >>> 32));
+            temp = Double.doubleToLongBits(y);
+            result = prime * result + (int) (temp ^ (temp >>> 32));
+            return result;
+        }
+
+        /**
+         * @return the length of the vector
+         * Hint: prefer length2 to perform length comparisons
+         */
+        public double length() {
+            return Math.sqrt(x * x + y * y);
+        }
+
+        /**
+         * @return the square of the length of the vector
+         */
+        public double length2() {
+            return x * x + y * y;
+        }
+
+        /**
+         * Return the vector resulting in this vector minus the values of the other vector
+         * @param other
+         * the instance to substract from this
+         * @return
+         * 
+         * a new instance of vector result of the minus operation.
+         */
+        public VectorD minus(VectorD other) {
+            return new VectorD(x - other.x, y - other.y);
+        }
+
+        /**
+         * multiplication operator
+         * @param factor
+         * the double coefficient to multiply the vector with
+         * @return
+         * return a new instance multiplied by the given factor
+         */
+        public VectorD multiply(double factor) {
+            return new VectorD(x * factor, y * factor);
+        }
+
+        /**
+         * @return
+         * the new instance normalized from this. A normalized instance has a length of 1
+         * If the length of this is 0 returns a (0,0) vector
+         */
+        public VectorD norm() {
+            final double length = length();
+            if (length>0)
+            	return new VectorD(x / length, y / length);
+            return new VectorD(0,0);
+        }
+
+        /**
+         * Returns the orthogonal vector (-y,x).
+         * @return
+         *  a new instance of vector perpendicular to this
+         */
+        public VectorD ortho() {
+            return new VectorD(-y, x);
+        }
+
+        @Override
+        public String toString() {
+            return "[x=" + doubleToString(x) + ", y=" + doubleToString(y) + "]";
+        }
+    }
+    
+    
+    
+    public static class Line {
+        private double slope;
+        private double offset;
+
+        private VectorD pointOnLine = null;
+
+        public Line(VectorD point1, VectorD point2)
+        {
+            this.slope = (point2.y - point1.y) / (point2.x - point1.x);
+            this.pointOnLine = point1;
+
+            this.offset = pointOnLine.y - slope * pointOnLine.x;
+        }
+
+        public Line(VectorD point1, double slope)
+        {
+            this.pointOnLine = point1;
+            this.slope = slope;
+            this.offset = pointOnLine.y - (slope * pointOnLine.x);
+        }
+
+        public double GetY(double x)
+        {
+            return slope * x + offset;
+        }
+        
+        public double GetX(double y){
+        	return (y - offset) / slope;
+        }
+
+		public double getSlope() {
+			return slope;
+		}
+
+		public double getOffset() {
+			return offset;
+		}
+    }
+    
     public static class Vector {
         private static String doubleToString(double d) {
             return String.format("%.3f", d);
@@ -1640,45 +2028,7 @@ class Player {
             return "[x=" + doubleToString(x) + ", y=" + doubleToString(y) + "]";
         }
     }
-    
-    
-    
-    public static class Line {
-        private double slope;
-        private double offset;
 
-        private Vector pointOnLine = null;
-
-        public Line(Vector point1, Vector point2)
-        {
-            this.slope = (point2.y - point1.y) / (point2.x - point1.x);
-            this.pointOnLine = point1;
-
-            this.offset = pointOnLine.y - slope * pointOnLine.x;
-        }
-
-        public Line(Vector point1, double slope)
-        {
-            this.pointOnLine = point1;
-            this.slope = slope;
-            this.offset = pointOnLine.y - (slope * pointOnLine.x);
-        }
-
-        public double GetY(double x)
-        {
-            return slope * x + offset;
-        }
         
-        public double GetX(double y){
-        	return (y - offset) / slope;
-        }
-
-		public double getSlope() {
-			return slope;
-		}
-
-		public double getOffset() {
-			return offset;
-		}
-    }
+    
 }
