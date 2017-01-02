@@ -1,9 +1,6 @@
 import java.util.*;
 import java.util.function.BiFunction;
 import java.util.stream.Collectors;
-
-import com.sun.java.swing.plaf.windows.resources.windows;
-
 import java.awt.Point;
 
 /**
@@ -1694,7 +1691,7 @@ class Player {
     	
     	public InfluenceMap(int width, int height, DistanceFunc computeDistanceFunc){
     		this.width = width;
-    		this.height 
+    		this.height = height;
     		this.influenceMap = new float[width][];
     		for(int i=0; i<width; i++){
     			this.influenceMap[i] = new float[height];
