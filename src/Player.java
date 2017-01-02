@@ -535,8 +535,35 @@ class Player {
         }
 		
 		private boolean isThereObstacleBetweenSnaffleAndGoal(Entity snaffle, Entity playerFlipendoing){
+			 Line playerToGoal = new Line(new Vector(playerFlipendoing.position), new Vector(snaffle.position));
+			 double y = playerToGoal.GetY(game.getGoal(opponentTeam).x);
+			 Vector goalHit = new Vector(game.getGoal(opponentTeam).x, y);
 			 
-             Point highest = game.getGoal(opponentTeam);
+			 /* point 1 = snaffle.position; 
+          		point 2 = goalHit - ((snaffle -goalHit).ortho().normalize() * checkRadius)
+          		point 3 = goalHit + ((snaffle -goalHit).ortho() .normalize() * checkRadius)
+			  */
+			 
+			 float checkRadius = 1000;
+			 
+			 Vector snafflePos = new Vector(snaffle.x, snaffle.y);
+			 Vector trianglePoint1 = goalHit.minus((snafflePos.minus(goalHit).ortho().norm().multiply(checkRadius)));
+			 Vector trianglePoint2 = goalHit.add((snafflePos.minus(goalHit).ortho().norm().multiply(checkRadius)));
+			 
+			 boolean obstacleFound = false;
+			 
+			 for(Entity e : game.entities){
+				 Point p1 = new Point(trianglePoint1.x, trianglePoint1.y);
+				 Point p2 = new Point(trianglePoint2.x, trianglePoint2.y);
+                 if(isLined(snaffle, e, p1, p2)){
+                     obstacleFound = true;
+                     break;
+                 }
+             }
+			 return obstacleFound;
+			 
+			 /*
+			 Point highest = game.getGoal(opponentTeam);
              Point lowest = game.getGoal(opponentTeam);
              
              Point snafflePosPrediction = new Point((snaffle.x + snaffle.vx), (snaffle.y + snaffle.vy) + (int)(snaffle.vy*0.5));
@@ -554,6 +581,7 @@ class Player {
              }
             
              return obstacleFound;
+             */
 		}
 
 		private String[] usePetrificus(String[] result, Entity[] myPlayers){
