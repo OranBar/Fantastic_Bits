@@ -1883,11 +1883,19 @@ class Player {
     	}
     	
     	public String getSummary(){
+    		return getSummary(false);
+    	}
+    	
+    	public String getSummary(boolean sortByPriority){
     		if(labelToHitCount.keySet().size() == 0){ return ""; }
     		
     		StringBuilder resultBuilder = new StringBuilder();
             List<String> keys = new ArrayList<String>(labelToHitCount.keySet());
     		
+            if(sortByPriority){
+            	keys.sort( (label1, label2) -> labelToPriority.get(label1).compareTo(labelToPriority.get(label2) ) );
+            }
+            
     		for(String label : keys){
     			Integer hitCount = labelToHitCount.get(label);
     			//int turn = labelToTurns.get(label)[labelToTurns.get(label).length-1];
@@ -1915,8 +1923,24 @@ class Player {
     		return addHeaderAndFooter(result);
     	}
     	
+    	public String getFullInfoByLabel(String label){
+    		String result = "";
+    		for(LineHitInfo info : dataGathered){
+    			if(info.getLabel().equals(label)){
+    				result += info.toString()+" \n";
+    			}
+    		}
+    		return result;
+    	}
+    	
     	public String getFullInfoByPriority(int priority){
-    		return null;
+    		String result = "";
+    		for(LineHitInfo info : dataGathered){
+    			if(info.getPriority() == priority){
+    				result += info.toString()+" \n";
+    			}
+    		}
+    		return result;
     	}
     	
     	public String getFullInfoTopPriority(){
@@ -1925,7 +1949,7 @@ class Player {
     	}
     	
     	private int getTopPriority(){
-    		return -1;
+    		return topPriority;
     	}
     	
     	private String addHeaderAndFooter(Object o){
