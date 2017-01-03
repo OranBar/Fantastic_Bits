@@ -59,11 +59,8 @@ class Player {
             }
             myNapoleon.gameStatesHistory.add((Game) myGame.clone());
             myNapoleon.prevTurnOpponentMana = myNapoleon.opponentMana;
-            
-            if(gameWillEndNextTurn()){
-            	//This is the time to log all the shit I wanna log!
-            	
-            }
+        
+            System.err.println(spaghettiDbg.getSummary());
             
             //Output - Movement
             ///////////////////
@@ -191,16 +188,14 @@ class Player {
                     x = myPlayers[i].x + (int)offset.x;
                     y = myPlayers[i].y + (int)offset.y;
                     
-                    spaghettiDbg.TrackLineHits("Throw");
-                    System.err.println(spaghettiDbg.getInfo());
+                    spaghettiDbg.trackLineHits("Throw", turns);
                     
                     result[i] = "THROW "+x+" "+y+" 500";
                 }
             }
             
             if(neddOneMoreGoalToWin()){
-                System.err.println("Aggressive mode ON");
-                result = useFlipendoShotAggressive(result, myPlayers, targets);
+            	result = useFlipendoShotAggressive(result, myPlayers, targets);
                 result = useAccio(result, myPlayers, targets);
                 result = usePetrificus(result, myPlayers);
             } else if(needOneMoreGoalToLoose()) {
@@ -1824,8 +1819,11 @@ class Player {
     	
     	public static int DEFAULT_PRIORITY = -1;
     	
-    	public HashMap<String, Integer> labelToHitCount;
-    	public HashMap<String, Integer> labelToPriority;
+    	private HashMap<String, Integer> labelToHitCount;
+    	private HashMap<String, Integer> labelToPriority;
+    	private HashMap<String, Integer[]> labelToTurns;
+    	
+    	private List<LineHitInfo> dataGathered = new ArrayList<LineHitInfo>();
     	
     	private int topPriority;
     	
@@ -1833,87 +1831,140 @@ class Player {
     		topPriority = DEFAULT_PRIORITY;
     		labelToHitCount = new HashMap<String, Integer>();
     		labelToPriority = new HashMap<String, Integer>();
+    		labelToTurns = new HashMap<String, Integer[]>();		
     	}
     	
-    	public void TrackLineHits(String label){
-    		TrackLineHits_Impl(label, DEFAULT_PRIORITY);
+    	public void trackLineHits(String label){
+    		trackLineHits_Impl(label, -1, DEFAULT_PRIORITY);
     	}
     	
-    	public void TrackLineHits(String label, int priority){
-    		TrackLineHits_Impl(label, priority);
+    	public void trackLineHits(String label, int turns){
+    		trackLineHits_Impl(label, turns, DEFAULT_PRIORITY);
     	}
     	
-    	private void TrackLineHits_Impl(String label, int priority){
+    	public void trackLineHits(String label, int turns, int priority){
+    		trackLineHits_Impl(label, turns, priority);
+    	}
+    	
+    	private void trackLineHits_Impl(String label, int turns, int priority){
     		//We are skipping one entry in the stacktrace, because to get here we pass through one of the
     		//TrackLineHits methods
     		StackTraceElement[] stackTrace =  Thread.currentThread().getStackTrace();
-    		
-    		System.err.println("I am coming from "+stackTrace[3].toString());
     		
     		if(priority > topPriority){
     			topPriority = priority;
     		}
     		
     		labelToPriority.put(label, priority); //I think that simply overriding the value every time is more efficient
+    		int turnsArrayLength = 0;
+    		Integer[] temp = new Integer[1];
+    		if(labelToTurns.containsKey(label)){
+    			turnsArrayLength = labelToTurns.get(label).length;
+    			temp = Arrays.copyOf(labelToTurns.get(label), turnsArrayLength+1);
+    		}
+    		temp[temp.length-1] = turns;
+    		labelToTurns.put(label, temp);
     		
     		int hitsUntilNow = 0;
     		if(labelToHitCount.containsKey(label)){
     			hitsUntilNow = labelToHitCount.get(label);
     		}
     		labelToHitCount.put(label, hitsUntilNow+1);
+    		
+    		
+    		LineHitInfo info = new LineHitInfo(label, turns, hitsUntilNow+1, priority, stackTrace);
+            System.err.println(addHeaderAndFooter(info));
+    		
+    		dataGathered.add(info);
     	}
     	
-    	public String getInfo(){
-    		return getInfo(false);
+    	public LineHitInfo getLastEntry(){
+    		return dataGathered.get(dataGathered.size()-1);
     	}
     	
-    	public String getInfo(boolean sortByPriority){
+    	public String getSummary(){
+    		if(labelToHitCount.keySet().size() == 0){ return ""; }
+    		
     		StringBuilder resultBuilder = new StringBuilder();
-    		List<String> keys = new ArrayList<String>(labelToHitCount.keySet());
-    		if(sortByPriority){
-    			//TODO:
-    		}
+            List<String> keys = new ArrayList<String>(labelToHitCount.keySet());
     		
     		for(String label : keys){
     			Integer hitCount = labelToHitCount.get(label);
-    			resultBuilder.append("Label "+label+" Hit count "+hitCount+"\n");
+    			//int turn = labelToTurns.get(label)[labelToTurns.get(label).length-1];
+    			resultBuilder.append("Label <"+label+"> Hit count "+hitCount+"\n Turns: {");
+    			for(Integer turn : labelToTurns.get(label)){
+    				resultBuilder.append(" "+turn+",");
+    			}
+    			resultBuilder.deleteCharAt(resultBuilder.length()-1);
+    			resultBuilder.append(" }\n");
+    			
     		}
     		
-    		return resultBuilder.toString();
+    		return addHeaderAndFooter(resultBuilder.toString());
     	}
     	
-    	public String getInfoByPriority(int priority){
+    	public String getFullInfo(){
+    		if(dataGathered.size() == 0){ return ""; }
+    		
+    		String result = "";
+
+    		for(LineHitInfo currInfo : dataGathered){
+    			result += currInfo.toString();
+    		}
+
+    		return addHeaderAndFooter(result);
+    	}
+    	
+    	public String getFullInfoByPriority(int priority){
     		return null;
     	}
     	
-    	public String getInfoTopPriority(){
+    	public String getFullInfoTopPriority(){
     		int topPriority = getTopPriority();
-    		return getInfoByPriority(topPriority);
+    		return getFullInfoByPriority(topPriority);
     	}
     	
     	private int getTopPriority(){
     		return -1;
     	}
+    	
+    	private String addHeaderAndFooter(Object o){
+    		return "------------Spaghetti Debgugger-------------\n"+
+    				o.toString()+
+    				"--------------------------------------------\n";
+    	}
     }
     
     public static class LineHitInfo{
     	
+    	private String label;
     	private int lineNumber;
     	private int hitCount;
     	private int priority;
-    	private String variablesStatus;
+    	private int turn;
+    	private String stackTrace;
     	
-		public LineHitInfo(int lineNumber, int hitCount, int priority, List<StackTraceElement> stackTrace) {
-			super();
-			this.lineNumber = lineNumber;
+		public LineHitInfo(String label, int turn, int hitCount, int priority, StackTraceElement[] stackTrace) {
+			this.label = label;
+			this.turn = turn;
 			this.hitCount = hitCount;
 			this.priority = priority;
-			variablesStatus = readFromStackTrace(stackTrace);
-		}
-		
-		private String readFromStackTrace(List<StackTraceElement> stackTrace){
 			
-			return null;
+			String temp = stackTrace[3].toString();
+    		int startIndex = temp.lastIndexOf(":")+1;
+    		int endIndex = temp.lastIndexOf(")");
+    		this.lineNumber = Integer.parseInt(temp.substring(startIndex, endIndex));
+    		
+    		this.stackTrace = "";
+    		
+    		for (int i = 3; i < stackTrace.length; i++) {
+				StackTraceElement e = stackTrace[i];
+				this.stackTrace += "  "+e.toString()+"\n";
+			}
+    	}
+		
+		public String getLabel(){
+			return label;
 		}
 
 		public int getLineNumber() {
@@ -1927,9 +1978,16 @@ class Player {
 		public int getPriority() {
 			return priority;
 		}
-
-		public String getVariablesStatus() {
-			return variablesStatus;
+		
+		@Override
+		public String toString(){
+			StringBuilder stringBuilder = new StringBuilder();
+			stringBuilder.append("Label <"+label+"> - ");
+			//stringBuilder.append("Line Number "+lineNumber+" - ");
+			stringBuilder.append("Hit count "+hitCount+"\n");
+			stringBuilder.append("Turn "+turn+"\n");
+			stringBuilder.append("Stack Trace: \n"+stackTrace+"\n");
+			return stringBuilder.toString();
 		}
 	}
 
