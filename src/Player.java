@@ -8,6 +8,8 @@ import java.awt.Point;
  * Move towards a Snaffle and use your team id to determine where you need to throw it.
  **/
 class Player {
+	
+	public static SpaghettiDebugger spaghettiDbg = new SpaghettiDebugger();
 
     public static void main(String args[]) {
         Scanner in = new Scanner(System.in);
@@ -58,12 +60,19 @@ class Player {
             myNapoleon.gameStatesHistory.add((Game) myGame.clone());
             myNapoleon.prevTurnOpponentMana = myNapoleon.opponentMana;
             
+            if(gameWillEndNextTurn()){
+            	//This is the time to log all the shit I wanna log!
+            	
+            }
+            
             //Output - Movement
             ///////////////////
             System.out.println(moves[0]);
             System.out.println(moves[1]);
             ///////////////////
         }
+        
+        
     }
     
     public static class Napoleon {
@@ -119,7 +128,6 @@ class Player {
             usingAccio[0]--;
             usingAccio[1]--;
            
-            
             
             Entity[] myPlayers = new Entity[2];
             myPlayers[0] = game.getAlliedSnatchers().get(0);
@@ -182,6 +190,9 @@ class Player {
                     
                     x = myPlayers[i].x + (int)offset.x;
                     y = myPlayers[i].y + (int)offset.y;
+                    
+                    spaghettiDbg.TrackLineHits("Throw");
+                    System.err.println(spaghettiDbg.getInfo());
                     
                     result[i] = "THROW "+x+" "+y+" 500";
                 }
@@ -411,8 +422,8 @@ class Player {
                     && game.getDistance(snaffle, player) < flipendoMaxDistanceThld 
                     ) ) {
                         
-                        if(isThereObstacleBetweenSnaffleAndGoal(snaffle, player)){
-                            result[i] = "FLIPENDO "+snaffle.id;
+                        if(isThereObstacleBetweenSnaffleAndGoal(snaffle, player)==false){
+                        	result[i] = "FLIPENDO "+snaffle.id;
                             flipendoedSnaffleId = snaffle.id;
                             flipendoDuration = 3;
                             myMana -= flipendoCost;
@@ -472,7 +483,7 @@ class Player {
                     && game.getDistance(snaffle, findNearest(snaffle.position, game.getAllEntitiesExcept(snaffle))) > 650 //If something really close to the snaffle, abort
                     ) ) {
                             
-                    	if(isThereObstacleBetweenSnaffleAndGoal(snaffle, players.get(i))){
+                    	if(isThereObstacleBetweenSnaffleAndGoal(snaffle, players.get(i))==false){
                     		if(playersSwapped){
                     			result[1-i] = "FLIPENDO "+snaffle.id+" SupaShot";
                     		} else {
@@ -520,7 +531,7 @@ class Player {
                     && game.getDistance(snaffle, myPlayers[i]) < flipendoMaxDistanceThld
                     ) ) {
                             
-                    	if(isThereObstacleBetweenSnaffleAndGoal(snaffle, myPlayers[i])){
+                    	if(isThereObstacleBetweenSnaffleAndGoal(snaffle, myPlayers[i])==false){
                             result[i] = "FLIPENDO "+snaffle.id;
                             flipendoedSnaffleId = snaffle.id;
                             flipendoDuration = 3;
@@ -535,7 +546,7 @@ class Player {
         }
 		
 		private boolean isThereObstacleBetweenSnaffleAndGoal(Entity snaffle, Entity playerFlipendoing){
-			 Line playerToGoal = new Line(new Vector(playerFlipendoing.position), new Vector(snaffle.position));
+			 Line playerToGoal = new Line(new Vector(playerFlipendoing.position), new Vector(snaffle.futurePosition()));
 			 double y = playerToGoal.GetY(game.getGoal(opponentTeam).x);
 			 Vector goalHit = new Vector(game.getGoal(opponentTeam).x, y);
 			 
@@ -544,7 +555,7 @@ class Player {
           		point 3 = goalHit + ((snaffle -goalHit).ortho() .normalize() * checkRadius)
 			  */
 			 
-			 float checkRadius = 1000;
+			 float checkRadius = 600;
 			 
 			 Vector snafflePos = new Vector(snaffle.x, snaffle.y);
 			 Vector trianglePoint1 = goalHit.minus((snafflePos.minus(goalHit).ortho().norm().multiply(checkRadius)));
@@ -556,6 +567,8 @@ class Player {
 				 Point p1 = new Point(trianglePoint1.x, trianglePoint1.y);
 				 Point p2 = new Point(trianglePoint2.x, trianglePoint2.y);
                  if(isLined(snaffle, e, p1, p2)){
+                	 System.err.println("Entity "+e.id+" is between "+snaffle.id
+                			 +"at position"+snaffle.position+" and "+p1+" "+p2);
                      obstacleFound = true;
                      break;
                  }
@@ -1044,13 +1057,14 @@ class Player {
            return game.getDistance(start, end);
         }
         
-        public boolean isLined(Entity player, Entity snaffle, Point goal1, Point goal2){
+        //Checks if snaffle is in the triangle with vertices pi, p2, p3.
+        public boolean isLined(Entity p1, Entity snaffle, Point p2, Point p3){
             Point snafflePos = new Point((int) snaffle.futurePosition().x, (int) snaffle.futurePosition().y);
             
-            double areaBig = getTriangleArea(player.position, goal1, goal2);
-            double a1 = getTriangleArea(snafflePos, goal1, goal2) ;
-            double a2 = getTriangleArea(player.position, snafflePos, goal2);
-            double a3 = getTriangleArea(player.position, snafflePos, goal1);
+            double areaBig = getTriangleArea(p1.position, p2, p3);
+            double a1 = getTriangleArea(snafflePos, p2, p3) ;
+            double a2 = getTriangleArea(p1.position, snafflePos, p3);
+            double a3 = getTriangleArea(p1.position, snafflePos, p2);
             
             //TODO: check if tolleranct is too high/low
             return Math.abs( (areaBig - a1) - a2 - a3) <= 0.1;
@@ -1805,5 +1819,118 @@ class Player {
     	
     	public float apply(int x1, int y1, int x2, int y2);
     }
-  
+    
+    public static class SpaghettiDebugger {
+    	
+    	public static int DEFAULT_PRIORITY = -1;
+    	
+    	public HashMap<String, Integer> labelToHitCount;
+    	public HashMap<String, Integer> labelToPriority;
+    	
+    	private int topPriority;
+    	
+    	public SpaghettiDebugger(){
+    		topPriority = DEFAULT_PRIORITY;
+    		labelToHitCount = new HashMap<String, Integer>();
+    		labelToPriority = new HashMap<String, Integer>();
+    	}
+    	
+    	public void TrackLineHits(String label){
+    		TrackLineHits_Impl(label, DEFAULT_PRIORITY);
+    	}
+    	
+    	public void TrackLineHits(String label, int priority){
+    		TrackLineHits_Impl(label, priority);
+    	}
+    	
+    	private void TrackLineHits_Impl(String label, int priority){
+    		//We are skipping one entry in the stacktrace, because to get here we pass through one of the
+    		//TrackLineHits methods
+    		StackTraceElement[] stackTrace =  Thread.currentThread().getStackTrace();
+    		
+    		System.err.println("I am coming from "+stackTrace[3].toString());
+    		
+    		if(priority > topPriority){
+    			topPriority = priority;
+    		}
+    		
+    		labelToPriority.put(label, priority); //I think that simply overriding the value every time is more efficient
+    		
+    		int hitsUntilNow = 0;
+    		if(labelToHitCount.containsKey(label)){
+    			hitsUntilNow = labelToHitCount.get(label);
+    		}
+    		labelToHitCount.put(label, hitsUntilNow+1);
+    	}
+    	
+    	public String getInfo(){
+    		return getInfo(false);
+    	}
+    	
+    	public String getInfo(boolean sortByPriority){
+    		StringBuilder resultBuilder = new StringBuilder();
+    		List<String> keys = new ArrayList<String>(labelToHitCount.keySet());
+    		if(sortByPriority){
+    			//TODO:
+    		}
+    		
+    		for(String label : keys){
+    			Integer hitCount = labelToHitCount.get(label);
+    			resultBuilder.append("Label "+label+" Hit count "+hitCount+"\n");
+    		}
+    		
+    		return resultBuilder.toString();
+    	}
+    	
+    	public String getInfoByPriority(int priority){
+    		return null;
+    	}
+    	
+    	public String getInfoTopPriority(){
+    		int topPriority = getTopPriority();
+    		return getInfoByPriority(topPriority);
+    	}
+    	
+    	private int getTopPriority(){
+    		return -1;
+    	}
+    }
+    
+    public static class LineHitInfo{
+    	
+    	private int lineNumber;
+    	private int hitCount;
+    	private int priority;
+    	private String variablesStatus;
+    	
+		public LineHitInfo(int lineNumber, int hitCount, int priority, List<StackTraceElement> stackTrace) {
+			super();
+			this.lineNumber = lineNumber;
+			this.hitCount = hitCount;
+			this.priority = priority;
+			variablesStatus = readFromStackTrace(stackTrace);
+		}
+		
+		private String readFromStackTrace(List<StackTraceElement> stackTrace){
+			
+			return null;
+		}
+
+		public int getLineNumber() {
+			return lineNumber;
+		}
+
+		public int getHitCount() {
+			return hitCount;
+		}
+
+		public int getPriority() {
+			return priority;
+		}
+
+		public String getVariablesStatus() {
+			return variablesStatus;
+		}
+	}
+
 }
