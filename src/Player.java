@@ -18,11 +18,11 @@ class Player {
         Game myGame = new Game();
         Napoleon myNapoleon = new Napoleon(myGame, myTeamId);
         
-        myNapoleon.turns = -1;
+        myNapoleon.turns = -2;
         
         // game loop
         while (true) {
-        	myNapoleon.turns++;
+        	myNapoleon.turns += 2;
         	System.err.println("Turn "+myNapoleon.turns);
             // Inputs
             ///////////////////
@@ -181,14 +181,12 @@ class Player {
                     //System.err.println("snaffle velocity x "+targets[i].vx+"- y "+targets[i].vy);
                     
                     //I want my desired velocity to be in the direction of this target.
-                    Vector desiredVelocity = new Vector(x,y).minus(new Vector(myPlayers[i].futurePosition()));
-                    Vector offset = desiredVelocity.minus(new Vector(myPlayers[i].vx * 0.75, myPlayers[i].vy * 0.75));
+                    VectorInt desiredVelocity = new VectorInt(x,y).minus(new VectorInt(myPlayers[i].futurePosition()));
+                    VectorInt offset = desiredVelocity.minus(new VectorInt(myPlayers[i].vx * 0.75, myPlayers[i].vy * 0.75));
                     
                     
                     x = myPlayers[i].x + (int)offset.x;
                     y = myPlayers[i].y + (int)offset.y;
-                    
-                    spaghettiDbg.trackLineHits("Throw", turns);
                     
                     result[i] = "THROW "+x+" "+y+" 500";
                 }
@@ -245,8 +243,8 @@ class Player {
             */
 
             
-            System.err.println("There are "+oneOfThoseMightHaveBeenFlipendoed.size()+" flipendo maybes");
-            System.err.println("I have "+myMana+" mana, while petrificus costs "+petrificusCost);
+            //System.err.println("There are "+oneOfThoseMightHaveBeenFlipendoed.size()+" flipendo maybes");
+            //System.err.println("I have "+myMana+" mana, while petrificus costs "+petrificusCost);
             
             //I think I know which snaffle he flipendoed. Let's petrify it.
             if(oneOfThoseMightHaveBeenFlipendoed.size() == 1 
@@ -541,55 +539,53 @@ class Player {
         }
 		
 		private boolean isThereObstacleBetweenSnaffleAndGoal(Entity snaffle, Entity playerFlipendoing){
-			 Line playerToGoal = new Line(new Vector(playerFlipendoing.position), new Vector(snaffle.futurePosition()));
-			 double y = playerToGoal.GetY(game.getGoal(opponentTeam).x);
-			 Vector goalHit = new Vector(game.getGoal(opponentTeam).x, y);
+			spaghettiDbg.trackLineHits("Flipendo: Checking for Obstacles", turns+2);
+			Line playerToGoal = new Line(new VectorInt(playerFlipendoing.position), new VectorInt(snaffle.futurePosition()));
+			double y = playerToGoal.GetY(game.getGoal(opponentTeam).x);
+			VectorD goalHit = new VectorD(game.getGoal(opponentTeam).x, y);
 			 
 			 /* point 1 = snaffle.position; 
-          		point 2 = goalHit - ((snaffle -goalHit).ortho().normalize() * checkRadius)
-          		point 3 = goalHit + ((snaffle -goalHit).ortho() .normalize() * checkRadius)
+				point 2 = goalHit - ((snaffle -goalHit).ortho().normalize() * checkRadius)
+				point 3 = goalHit + ((snaffle -goalHit).ortho() .normalize() * checkRadius)
 			  */
 			 
-			 float checkRadius = 600;
+			float checkRadius = 600;
 			 
-			 Vector snafflePos = new Vector(snaffle.x, snaffle.y);
-			 Vector trianglePoint1 = goalHit.minus((snafflePos.minus(goalHit).ortho().norm().multiply(checkRadius)));
-			 Vector trianglePoint2 = goalHit.add((snafflePos.minus(goalHit).ortho().norm().multiply(checkRadius)));
+			 VectorD snafflePos = new VectorD(snaffle.x, snaffle.y);
+			 VectorD trianglePoint1 = goalHit.minus((snafflePos.minus(goalHit).ortho().norm().multiply(checkRadius)));
+			 VectorD trianglePoint2 = goalHit.add((snafflePos.minus(goalHit).ortho().norm().multiply(checkRadius)));
 			 
 			 boolean obstacleFound = false;
 			 
+			 for(Entity e : game.getAllEntitiesExcept(snaffle)){
+				 Point p1 = new Point((int)trianglePoint1.x, (int)trianglePoint1.y);
+				 Point p2 = new Point((int)trianglePoint2.x, (int)trianglePoint2.y);
+			     if(isLined(snaffle, e, p1, p2)){
+			    	 System.err.println("Entity "+e.id+" obstructed");
+			    	 spaghettiDbg.trackLineHits("Flipendo: Obstacle Found", turns+2);
+			         obstacleFound = true;
+			         break;
+			     }
+			 }
+			 
+			 
+			 Point highest = game.getGoal(opponentTeam);
+			 Point lowest = game.getGoal(opponentTeam);
+			 
+			 Point snafflePosPrediction = new Point((snaffle.x + snaffle.vx), (snaffle.y + snaffle.vy) + (int)(snaffle.vy*0.5));
+			 
+			 highest.y = snafflePosPrediction.y - 400;
+			 lowest.y = snafflePosPrediction.y + 400;
+			 
 			 for(Entity e : game.entities){
-				 Point p1 = new Point(trianglePoint1.x, trianglePoint1.y);
-				 Point p2 = new Point(trianglePoint2.x, trianglePoint2.y);
-                 if(isLined(snaffle, e, p1, p2)){
-                	 System.err.println("Entity "+e.id+" is between "+snaffle.id
-                			 +"at position"+snaffle.position+" and "+p1+" "+p2);
-                     obstacleFound = true;
-                     break;
-                 }
-             }
+			     if(isLined(snaffle, e, highest, lowest)){
+			         spaghettiDbg.trackLineHits("Flipendo OLD: Obstacle Found", turns+2);
+			         break;
+			     }
+			 }
+			
 			 return obstacleFound;
 			 
-			 /*
-			 Point highest = game.getGoal(opponentTeam);
-             Point lowest = game.getGoal(opponentTeam);
-             
-             Point snafflePosPrediction = new Point((snaffle.x + snaffle.vx), (snaffle.y + snaffle.vy) + (int)(snaffle.vy*0.5));
-             
-             highest.y = snafflePosPrediction.y - 400;
-             lowest.y = snafflePosPrediction.y + 400;
-             
-             boolean obstacleFound = true;
-             
-             for(Entity e : game.entities){
-                 if(isLined(snaffle, e, highest, lowest)){
-                     obstacleFound = false;
-                     break;
-                 }
-             }
-            
-             return obstacleFound;
-             */
 		}
 
 		private String[] usePetrificus(String[] result, Entity[] myPlayers){
@@ -797,14 +793,14 @@ class Player {
                 for(int i=0; i<2;i++){
                     if(distanceFromSnaffle[i] > distanceFromSnaffle[1-i] ){
                     	//Player i should be the attacker, since it's further away from the snaffle.
-                    	Vector defenderPos = new Vector(myPlayers[1-i].position);
-                    	Vector goalPos  = new Vector(game.getGoal(opponentTeam));
+                    	VectorInt defenderPos = new VectorInt(myPlayers[1-i].position);
+                    	VectorInt goalPos  = new VectorInt(game.getGoal(opponentTeam));
                     	
-                    	Vector defenderToGoal = goalPos.minus(defenderPos);
+                    	VectorInt defenderToGoal = goalPos.minus(defenderPos);
                     	defenderToGoal = defenderToGoal.norm();
                     	
                     	
-                    	Vector targetPosition = new Vector(myPlayers[1-i].position).add( (defenderToGoal.multiply(2000) ));
+                    	VectorInt targetPosition = new VectorInt(myPlayers[1-i].position).add( (defenderToGoal.multiply(2000) ));
                     	
                     	Entity newTargetPosition = new Entity(snaffles.get(0).id, "PuntoNelVuoto");
                         newTargetPosition.updateInfo( (int)targetPosition.x, (int)targetPosition.y, 0, 0, 0);
@@ -884,7 +880,7 @@ class Player {
         	if(myTeam==1 && player.futurePosition().x < snaffle.x ){
         		return false;
         	}
-        	Vector snaffleVelocity = new Vector(snaffle.vx, snaffle.vy);
+        	VectorInt snaffleVelocity = new VectorInt(snaffle.vx, snaffle.vy);
         	//For the love of god don't hit snaffles that are moving fast
         	if(snaffleVelocity.length() > 400){
         		return false;
@@ -911,14 +907,14 @@ class Player {
         	}
         	
         	
-        	Vector playerPos = new Vector(player.futurePosition());
-        	Vector snafflePos = new Vector(snaffle.futurePosition());
+        	VectorInt playerPos = new VectorInt(player.futurePosition());
+        	VectorInt snafflePos = new VectorInt(snaffle.futurePosition());
 
         	
         	Line line = new Line(playerPos, snafflePos);
         	
-        	Vector topWallHitPoint = new Vector(line.GetX(0f), 0f);
-        	Vector bottomWallHitPoint = new Vector(line.GetX(7000f), 7000f);
+        	VectorInt topWallHitPoint = new VectorInt(line.GetX(0f), 0f);
+        	VectorInt bottomWallHitPoint = new VectorInt(line.GetX(7000f), 7000f);
 
         	if(topWallHitPoint.x < 0 || topWallHitPoint.x > 16000){
         		return false;
@@ -1169,7 +1165,7 @@ class Player {
         
         public Entity futureTurn(){
         	Point futurePosition = futurePosition();
-        	Vector futureSpeed = new Vector(vx, vy).multiply(getFriction());
+        	VectorInt futureSpeed = new VectorInt(vx, vy).multiply(getFriction());
         	
         	Entity future = new Entity(id, entityType);
         	//TODO: BUG - I don't really know the future state, and can't know unless I implement collisions and full turn prediction.
@@ -1179,9 +1175,9 @@ class Player {
         	return future;
         }
         
-        public Entity futureTurn(Vector moveTarget, int thrust){
+        public Entity futureTurn(VectorInt moveTarget, int thrust){
         	Point futurePosition = futurePosition(moveTarget, thrust);
-        	Vector futureSpeed = computeSpeed(moveTarget, thrust).multiply(getFriction());
+        	VectorInt futureSpeed = computeSpeed(moveTarget, thrust).multiply(getFriction());
         	
         	Entity future = new Entity(id, entityType);
         	//TODO: BUG - I don't really know the future state, and can't know unless I implement collisions and full turn prediction.
@@ -1195,20 +1191,20 @@ class Player {
         	return new Point(x + vx, y + vy);
         }
         
-        public Point futurePosition(Vector moveTarget, int thrust){
-        	Vector myPosition = new Vector(position);
-        	Vector newSpeed = computeSpeed(moveTarget, thrust);
+        public Point futurePosition(VectorInt moveTarget, int thrust){
+        	VectorInt myPosition = new VectorInt(position);
+        	VectorInt newSpeed = computeSpeed(moveTarget, thrust);
         	
         	return new Point(myPosition.x + newSpeed.x, myPosition.y + newSpeed.y);
         	
         }
         
-        public Vector computeSpeed(Vector moveTarget, int thrust){
-        	Vector myPosition = new Vector(position);
-        	Vector direction = moveTarget.minus(myPosition).norm();
+        public VectorInt computeSpeed(VectorInt moveTarget, int thrust){
+        	VectorInt myPosition = new VectorInt(position);
+        	VectorInt direction = moveTarget.minus(myPosition).norm();
         	
-        	Vector currSpeed = new Vector(vx, vy);
-        	Vector newSpeed = null;
+        	VectorInt currSpeed = new VectorInt(vx, vy);
+        	VectorInt newSpeed = null;
         	
         	newSpeed = currSpeed.add(direction.multiply( thrust / getMass()));
         	
@@ -1216,8 +1212,8 @@ class Player {
         }
         
         public boolean willCollide(Entity other) {
-    		Vector toOther = new Vector(other.position).minus(new Vector(position));
-    		Vector relativeSpeed = new Vector(vx, vy).minus(new Vector(other.vx, other.vy));
+    		VectorInt toOther = new VectorInt(other.position).minus(new VectorInt(position));
+    		VectorInt relativeSpeed = new VectorInt(vx, vy).minus(new VectorInt(other.vx, other.vy));
     		if (relativeSpeed.length2() <= 0)// No relative movement
     			return false;
     		if (toOther.dot(relativeSpeed) < 0)// Opposite directions
@@ -1394,7 +1390,7 @@ class Player {
             return getDistance(e1.position, e2.position);
         }
         
-        public double getDistance(Vector start, Vector end){
+        public double getDistance(VectorInt start, VectorInt end){
             return Math.sqrt(Math.pow(start.x-end.x,2)+Math.pow(start.y-end.y,2));
         }
         
@@ -1456,7 +1452,7 @@ class Player {
      * It contains final fields and will return a new instance on each performed operations
      *
      */
-    public static class Vector {
+    public static class VectorInt {
         private static String doubleToString(double d) {
             return String.format("%.3f", d);
         }
@@ -1475,7 +1471,7 @@ class Player {
          * @param point
          * 	The point from which we will take the x and y
          */
-        public Vector(Point coord) {
+        public VectorInt(Point coord) {
             this(coord.x, coord.y);
         }
 
@@ -1486,12 +1482,12 @@ class Player {
          * @param y
          *  the y value of the vector
          */
-        public Vector(double x, double y) {
+        public VectorInt(double x, double y) {
             this.x = (int) x;
             this.y = (int) y;
         }
         
-        public Vector(int x, int y) {
+        public VectorInt(int x, int y) {
             this.x = x;
             this.y = y;
         }
@@ -1502,7 +1498,7 @@ class Player {
          * @param other
          * 		use the x and y values of the given vector
          */
-        public Vector(Vector other) {
+        public VectorInt(VectorInt other) {
             this(other.x, other.y);
         }
 
@@ -1513,8 +1509,8 @@ class Player {
          * @return
          * 	a new instance of vector sum of this and the given vector
          */
-        public Vector add(Vector other) {
-            return new Vector(x + other.x, y + other.y);
+        public VectorInt add(VectorInt other) {
+            return new VectorInt(x + other.x, y + other.y);
         }
 
         /**
@@ -1522,8 +1518,8 @@ class Player {
          * 
          * @return a new vector instance with both x and y negated
          */
-        public Vector negate() {
-            return new Vector(-x, -y);
+        public VectorInt negate() {
+            return new VectorInt(-x, -y);
         }
 
         /**
@@ -1533,7 +1529,7 @@ class Player {
          * @return
          * 		a new instance rotated
          */
-        public Vector rotateInDegree(double degree){
+        public VectorInt rotateInDegree(double degree){
         	return rotateInRadian(Math.toRadians(degree));
         }
 
@@ -1544,11 +1540,11 @@ class Player {
          * @return
          * a new instance rotated
          */
-        public Vector rotateInRadian(double radians) {
+        public VectorInt rotateInRadian(double radians) {
             final double length = length();
             double angle = angleInRadian();
             angle += radians;
-            final Vector result = new Vector(Math.cos(angle), Math.sin(angle));
+            final VectorInt result = new VectorInt(Math.cos(angle), Math.sin(angle));
             return result.multiply(length);
         }
 
@@ -1576,7 +1572,7 @@ class Player {
          * @return
          * 		the dot product
          */
-        public double dot(Vector other) {
+        public double dot(VectorInt other) {
             return x * other.x + y * other.y;
         }
 
@@ -1591,7 +1587,7 @@ class Player {
             if (getClass() != obj.getClass()) {
                 return false;
             }
-            final Vector other = (Vector) obj;
+            final VectorInt other = (VectorInt) obj;
             if (Math.abs(x - other.x) > COMPARISON_TOLERANCE) {
                 return false;
             }
@@ -1636,8 +1632,8 @@ class Player {
          * 
          * a new instance of vector result of the minus operation.
          */
-        public Vector minus(Vector other) {
-            return new Vector(x - other.x, y - other.y);
+        public VectorInt minus(VectorInt other) {
+            return new VectorInt(x - other.x, y - other.y);
         }
 
         /**
@@ -1647,8 +1643,8 @@ class Player {
          * @return
          * return a new instance multiplied by the given factor
          */
-        public Vector multiply(double factor) {
-            return new Vector(x * factor, y * factor);
+        public VectorInt multiply(double factor) {
+            return new VectorInt(x * factor, y * factor);
         }
 
         /**
@@ -1656,11 +1652,11 @@ class Player {
          * the new instance normalized from this. A normalized instance has a length of 1
          * If the length of this is 0 returns a (0,0) vector
          */
-        public Vector norm() {
+        public VectorInt norm() {
             final double length = length();
             if (length>0)
-            	return new Vector(x / length, y / length);
-            return new Vector(0,0);
+            	return new VectorInt(x / length, y / length);
+            return new VectorInt(0,0);
         }
 
         /**
@@ -1668,8 +1664,8 @@ class Player {
          * @return
          *  a new instance of vector perpendicular to this
          */
-        public Vector ortho() {
-            return new Vector(-y, x);
+        public VectorInt ortho() {
+            return new VectorInt(-y, x);
         }
 
         @Override
@@ -1678,23 +1674,243 @@ class Player {
         }
     }
     
-    
+    public static class VectorD {
+        private static String doubleToString(double d) {
+            return String.format("%.3f", d);
+        }
+
+        public final double x;
+
+        public final double y;
+
+        /**
+         * Used in the equals method in order to consider two double are "equals"
+         */
+        public static double COMPARISON_TOLERANCE = 0.0000001;
+
+        /**
+         * Constructor from a given point
+         * @param point
+         * 	The point from which we will take the x and y
+         */
+        public VectorD(Point coord) {
+            this(coord.x, coord.y);
+        }
+
+        /**
+         * Constructor from two double
+         * @param x
+         * 	the x value of the vector
+         * @param y
+         *  the y value of the vector
+         */
+        public VectorD(double x, double y) {
+            this.x = x;
+            this.y = y;
+        }
+        
+        public VectorD(int x, int y) {
+            this.x = x;
+            this.y = y;
+        }
+
+        
+        /**
+         * Constructor from another vector
+         * @param other
+         * 		use the x and y values of the given vector
+         */
+        public VectorD(VectorD other) {
+            this(other.x, other.y);
+        }
+
+        
+        /**
+         * Add to this vector the given vector
+         * @param other
+         * @return
+         * 	a new instance of vector sum of this and the given vector
+         */
+        public VectorD add(VectorD other) {
+            return new VectorD(x + other.x, y + other.y);
+        }
+
+        /**
+         * Negates this vector. The vector has the same magnitude as before, but its direction is now opposite.
+         * 
+         * @return a new vector instance with both x and y negated
+         */
+        public VectorD negate() {
+            return new VectorD(-x, -y);
+        }
+
+        /**
+         * Return a new instance of vector rotated from the given number of degrees.
+         * @param degree
+         * 		the number of degrees to rotate
+         * @return
+         * 		a new instance rotated
+         */
+        public VectorD rotateInDegree(double degree){
+        	return rotateInRadian(Math.toRadians(degree));
+        }
+
+        /**
+         * Return a new instance of vector rotated from the given number of radians.
+         * @param radians
+         * the number of radians to rotate
+         * @return
+         * a new instance rotated
+         */
+        public VectorD rotateInRadian(double radians) {
+            final double length = length();
+            double angle = angleInRadian();
+            angle += radians;
+            final VectorD result = new VectorD(Math.cos(angle), Math.sin(angle));
+            return result.multiply(length);
+        }
+
+        /**
+         * @return
+         * 	the angle between this vector and the vector (1,0) in degrees
+         */
+        public double angleInDegree() {
+            return Math.toDegrees(angleInRadian());
+        }
+
+    	/**
+    	 * @return
+         * 	the angle between this vector and the vector (1,0) in radians
+    	 */
+    	private double angleInRadian() {
+    		return Math.atan2(y, x);
+    	}
+
+        /**
+         * dot product operator
+         * two vectors that are perpendicular have a dot product of 0
+         * @param other
+         * 		the other vector of the dot product
+         * @return
+         * 		the dot product
+         */
+        public double dot(VectorD other) {
+            return x * other.x + y * other.y;
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (this == obj) {
+                return true;
+            }
+            if (obj == null) {
+                return false;
+            }
+            if (getClass() != obj.getClass()) {
+                return false;
+            }
+            final VectorD other = (VectorD) obj;
+            if (Math.abs(x - other.x) > COMPARISON_TOLERANCE) {
+                return false;
+            }
+            if (Math.abs(y - other.y) > COMPARISON_TOLERANCE) {
+                return false;
+            }
+            return true;
+        }
+
+        @Override
+        public int hashCode() {
+            final int prime = 31;
+            int result = 1;
+            long temp;
+            temp = Double.doubleToLongBits(x);
+            result = prime * result + (int) (temp ^ (temp >>> 32));
+            temp = Double.doubleToLongBits(y);
+            result = prime * result + (int) (temp ^ (temp >>> 32));
+            return result;
+        }
+
+        /**
+         * @return the length of the vector
+         * Hint: prefer length2 to perform length comparisons
+         */
+        public double length() {
+            return Math.sqrt(x * x + y * y);
+        }
+
+        /**
+         * @return the square of the length of the vector
+         */
+        public double length2() {
+            return x * x + y * y;
+        }
+
+        /**
+         * Return the vector resulting in this vector minus the values of the other vector
+         * @param other
+         * the instance to substract from this
+         * @return
+         * 
+         * a new instance of vector result of the minus operation.
+         */
+        public VectorD minus(VectorD other) {
+            return new VectorD(x - other.x, y - other.y);
+        }
+
+        /**
+         * multiplication operator
+         * @param factor
+         * the double coefficient to multiply the vector with
+         * @return
+         * return a new instance multiplied by the given factor
+         */
+        public VectorD multiply(double factor) {
+            return new VectorD(x * factor, y * factor);
+        }
+
+        /**
+         * @return
+         * the new instance normalized from this. A normalized instance has a length of 1
+         * If the length of this is 0 returns a (0,0) vector
+         */
+        public VectorD norm() {
+            final double length = length();
+            if (length>0)
+            	return new VectorD(x / length, y / length);
+            return new VectorD(0,0);
+        }
+
+        /**
+         * Returns the orthogonal vector (-y,x).
+         * @return
+         *  a new instance of vector perpendicular to this
+         */
+        public VectorD ortho() {
+            return new VectorD(-y, x);
+        }
+
+        @Override
+        public String toString() {
+            return "[x=" + doubleToString(x) + ", y=" + doubleToString(y) + "]";
+        }
+    }
     
     public static class Line {
         private double slope;
         private double offset;
 
-        private Vector pointOnLine = null;
+        private VectorInt pointOnLine = null;
 
-        public Line(Vector point1, Vector point2)
+        public Line(VectorInt point1, VectorInt point2)
         {
-            this.slope = (point2.y - point1.y) / (point2.x - point1.x);
+            this.slope = (point2.y - point1.y) / (float)(point2.x - point1.x);
             this.pointOnLine = point1;
 
-            this.offset = pointOnLine.y - slope * pointOnLine.x;
+            this.offset = pointOnLine.y - (slope * pointOnLine.x);
         }
 
-        public Line(Vector point1, double slope)
+        public Line(VectorInt point1, double slope)
         {
             this.pointOnLine = point1;
             this.slope = slope;
